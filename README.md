@@ -1,2 +1,1 @@
-# pbrt
-Racket implementation of pbrt
+# lmx

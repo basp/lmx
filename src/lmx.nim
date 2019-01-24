@@ -1,4 +1,4 @@
-import math, sequtils, options, algorithm
+import os, math, sequtils, options, algorithm
 
 type
   Vec4* = tuple[x: float, y: float, z: float, w: float]
@@ -260,6 +260,42 @@ proc intersect*(obj: Sphere, ray: Ray): seq[Intersection] {.inline.} =
     t2 = (-b + sqrt(discriminant)) / (2 * a)
   @[(t1, obj), (t2, obj)]
 
+proc getColor256(c: Color): tuple[r: int, g: int, b: int] =
+  let
+    r = int(255.99 * c.r)
+    g = int(255.99 * c.g)
+    b = int(255.99 * c.b)
+  (r, g, b)
+
 when isMainModule:
-  echo("Hello, World!")
- 
+  let
+     c = color(1, 0, 0)
+     black = getColor256(color(0, 0, 0))
+     ic = getColor256(c)
+     shape = sphere()
+     wallZ = 10.0
+     wallSize = 7.0
+     canvasPixels = 100
+     pixelSize = wallSize / float(canvasPixels)
+     half = wallSize / 2
+     rayOrigin = point(0, 0, -5)
+     f = open("out.ppm", fmWrite)
+
+  writeLine(f, "P3")
+  writeLine(f, canvasPixels, " ", canvasPixels)
+  writeLine(f, 255)
+
+  for y in 0..canvasPixels - 1:
+    let worldY = half - pixelSize * float(y)
+    for x in 0..canvasPIxels - 1:
+      let 
+        worldX = -half + pixelSize * float(x)
+        position = point(worldX, worldY, wallZ)
+        r = ray(rayOrigin, normalize(position - rayOrigin))
+        xs = intersect(shape, r)
+        h = hit(xs)
+      if h.isSome():
+        writeLine(f, ic.r, " ", ic.g, " ", ic.b)
+      else:
+        writeLIne(f, black.r, " ", black.g, " ", black.b)
+        

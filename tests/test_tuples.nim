@@ -132,3 +132,17 @@ suite "tuples":
         let c1 = color(1.0, 0.2, 0.4)
         let c2 = color(0.9, 1.0, 0.1)
         check((c1 * c2) =~ color(0.9, 0.2, 0.04))
+
+    test "reflecting a vector approaching at 45 deg":
+        let 
+            v = vector(1, -1, 0)
+            n = vector(0, 1, 0)
+            r = reflect(v, n)
+        check(r =~ vector(1, 1, 0))
+
+    test "reflecting a vector off a slanted surface":
+        let
+            v = vector(0, -1, 0)
+            n = vector(sqrt(2.0) / 2, sqrt(2.0) / 2, 0)
+            r = reflect(v, n)
+        check(r =~ vector(1, 0, 0))

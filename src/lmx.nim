@@ -8,6 +8,7 @@ type
   Sphere = object of RootObj
     transform*: Matrix[4]
   Intersection = tuple[t: float, obj: Sphere]
+  PointLight = tuple[intensity: Color, position: Vec4]
 
 const identity* : Matrix[4] = [[1.0, 0.0, 0.0, 0.0],
                                [0.0, 1.0, 0.0, 0.0],
@@ -260,14 +261,28 @@ proc intersect*(obj: Sphere, ray: Ray): seq[Intersection] {.inline.} =
     t2 = (-b + sqrt(discriminant)) / (2 * a)
   @[(t1, obj), (t2, obj)]
 
-proc getColor256(c: Color): tuple[r: int, g: int, b: int] =
+proc normalAt*(obj: Sphere, worldPoint: Vec4): Vec4 {.inline.} =
   let
-    r = int(255.99 * c.r)
-    g = int(255.99 * c.g)
-    b = int(255.99 * c.b)
-  (r, g, b)
+    objPoint = inverse(obj.transform) * worldPoint
+    objNormal = objPoint - point(0, 0, 0)
+  var worldNormal = transpose(inverse(obj.transform)) * objNormal
+  worldNormal.w = 0.0
+  normalize(worldNormal)
+
+proc reflect*(a: Vec4, normal: Vec4): Vec4 {.inline.} =
+  a - normal * 2 * dot(a, normal)
+
+proc pointLight*(position: Vec4, intensity: Color): PointLight {.inline.} =
+  (intensity, position)
 
 when isMainModule:
+  proc getColor256(c: Color): tuple[r: int, g: int, b: int] =
+    let
+      r = int(255.99 * c.r)
+      g = int(255.99 * c.g)
+      b = int(255.99 * c.b)
+    (r, g, b)
+
   var shape = sphere()
   let
      c = color(1, 0, 0)

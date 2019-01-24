@@ -268,11 +268,11 @@ proc getColor256(c: Color): tuple[r: int, g: int, b: int] =
   (r, g, b)
 
 when isMainModule:
+  var shape = sphere()
   let
      c = color(1, 0, 0)
      black = getColor256(color(0, 0, 0))
      ic = getColor256(c)
-     shape = sphere()
      wallZ = 10.0
      wallSize = 7.0
      canvasPixels = 100
@@ -280,6 +280,11 @@ when isMainModule:
      half = wallSize / 2
      rayOrigin = point(0, 0, -5)
      f = open("out.ppm", fmWrite)
+
+  #shape.transform = scaling(1, 0.5, 1)
+  #shape.transform = scaling(0.5, 1, 1)
+  #shape.transform = rotation_z(PI / 4) * scaling(0.5, 1, 1) #remember, reverse application, scaling goes first
+  shape.transform = shearing(1, 0, 0, 0, 0, 0)
 
   writeLine(f, "P3")
   writeLine(f, canvasPixels, " ", canvasPixels)
@@ -298,4 +303,3 @@ when isMainModule:
         writeLine(f, ic.r, " ", ic.g, " ", ic.b)
       else:
         writeLIne(f, black.r, " ", black.g, " ", black.b)
-        

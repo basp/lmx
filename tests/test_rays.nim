@@ -32,3 +32,6 @@ suite "rays":
       r2 = transform(r, m)
     check(r2.origin =~ point(2, 6, 12))
     check(r2.direction =~ vector(0, 3, 0))
+
+  
+  

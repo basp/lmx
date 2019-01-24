@@ -1,3 +1,5 @@
-nimcache
+.vscode/
+nimcache/
+*.swp
 *.exe
 *.ppm

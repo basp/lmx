@@ -4,6 +4,9 @@ type
   Vec4* = tuple[x: float, y: float, z: float, w: float]
   Color* = tuple[r: float, g: float, b: float]
   Matrix*[N: static[int]] = array[0..N-1, array[0..N-1, float]]
+  Ray* = tuple[origin: Vec4, direction: Vec4]
+  Sphere = object of RootObj
+  Intersection = tuple[t: float, obj: Sphere]
 
 const identity* : Matrix[4] = [[1.0, 0.0, 0.0, 0.0],
                                [0.0, 1.0, 0.0, 0.0],
@@ -119,7 +122,7 @@ proc transpose*[N](a: Matrix[N]): Matrix[N] {.inline.} =
 proc determinant*(a: Matrix[2]): float {.inline.} =
   a[0][0] * a[1][1] - a[0][1] * a[1][0]
 
-proc submatrix[N, M](a: Matrix[N], row: int, col: int): Matrix[M] =
+proc submatrix[N, M](a: Matrix[N], row: int, col: int): Matrix[M] {.inline.} =
   let 
     idxs = toSeq 0..N-1
     rows = filter(idxs) do (i: int) -> bool : i != row
@@ -143,7 +146,7 @@ proc cofactor*(a: Matrix[3], row: int, col: int): float {.inline.} =
   let m = minor(a, row, col)
   if (row + col) mod 2 == 0: m else: -m
 
-proc determinant*(a: Matrix[3]): float =
+proc determinant*(a: Matrix[3]): float {.inline.} =
   let 
     x = a[0][0] * cofactor(a, 0, 0)
     y = a[0][1] * cofactor(a, 0, 1)
@@ -157,7 +160,7 @@ proc cofactor*(a: Matrix[4], row: int, col: int): float {.inline.} =
   let m = minor(a, row, col)
   if (row + col) mod 2 == 0: m else: -m
 
-proc determinant*(a: Matrix[4]): float =
+proc determinant*(a: Matrix[4]): float {.inline.} =
   let 
     x = a[0][0] * cofactor(a, 0, 0)
     y = a[0][1] * cofactor(a, 0, 1)
@@ -170,6 +173,8 @@ proc isInvertible*(a: Matrix[4]): bool {.inline.} =
 
 proc inverse*(a: Matrix[4]): Matrix[4] =
   let d = determinant(a)
+  if d =~ 0:
+    raise newException(Exception, "matrix is not invertible")
   var b: Matrix[4]
   for row in 0..3:
     for col in 0..3:
@@ -194,6 +199,56 @@ proc rotationX*(r: float): Matrix[4] {.inline.} =
    [0.0, cos(r), -sin(r), 0.0],
    [0.0, sin(r), cos(r), 0.0],
    [0.0, 0.0, 0.0, 1.0]]
+
+proc rotationY*(r: float): Matrix[4] {.inline.} =
+  [[cos(r), 0.0, sin(r), 0.0],
+   [0.0, 1.0, 0.0, 0.0],
+   [-sin(r), 0.0, cos(r), 0.0],
+   [0.0, 0.0, 0.0, 1.0]]
+
+proc rotationZ*(r: float): Matrix[4] {.inline.} =
+  [[cos(r), -sin(r), 0.0, 0.0],
+   [sin(r), cos(r), 0.0, 0.0],
+   [0.0, 0.0, 1.0, 0.0],
+   [0.0, 0.0, 0.0, 1.0]]
+
+proc shearing*(xy: float, xz: float, 
+              yx: float, yz: float, 
+              zx: float, zy: float): Matrix[4] {.inline.} =
+  [[1.0, xy, xz, 0.0],
+   [yx, 1.0, yz, 0.0],
+   [zx, zy, 1.0, 0.0],
+   [0.0, 0.0, 0.0, 1.0]]
+
+proc ray*(origin: Vec4, direction: Vec4): Ray {.inline.} =
+  (origin, direction)
+
+proc position*(ray: Ray, t: float): Vec4 {.inline.} =
+  ray.origin + ray.direction * t
+
+proc sphere*(): Sphere {.inline.} = Sphere()
+
+proc intersect*(obj: Sphere, ray: Ray): seq[Intersection] =
+  let
+    # the vector from the sphere's center to the ray's origin
+    # note: sphere is assumed to be at origin
+    sphereToRay = ray.origin - point(0, 0, 0)
+    a = dot(ray.direction, ray.direction)
+    b = 2 * dot(ray.direction, sphereToRay)
+    c = dot(sphereToRay, sphereToRay) - 1.0
+    discriminant = b * b - 4 * a * c
+  if discriminant < 0: 
+    return @[]
+  let
+    t1 = (-b - sqrt(discriminant)) / (2 * a)
+    t2 = (-b + sqrt(discriminant)) / (2 * a)
+  @[(t1, obj), (t2, obj)]
+
+proc intersection*(t: float, obj: Sphere): Intersection {.inline.} =
+  (t, obj)
+
+proc intersections*(xs: varargs[Intersection]): seq[Intersection] {.inline.} =
+  @[(1.0, sphere()), (2.0, sphere())]
 
 when isMainModule:
   echo("Hello, World!")

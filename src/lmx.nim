@@ -1,4 +1,4 @@
-import math, sequtils
+import math, sequtils, options, algorithm
 
 type
   Vec4* = tuple[x: float, y: float, z: float, w: float]
@@ -6,6 +6,7 @@ type
   Matrix*[N: static[int]] = array[0..N-1, array[0..N-1, float]]
   Ray* = tuple[origin: Vec4, direction: Vec4]
   Sphere = object of RootObj
+    transform*: Matrix[4]
   Intersection = tuple[t: float, obj: Sphere]
 
 const identity* : Matrix[4] = [[1.0, 0.0, 0.0, 0.0],
@@ -173,8 +174,7 @@ proc isInvertible*(a: Matrix[4]): bool {.inline.} =
 
 proc inverse*(a: Matrix[4]): Matrix[4] =
   let d = determinant(a)
-  if d =~ 0:
-    raise newException(Exception, "matrix is not invertible")
+  if d =~ 0: raise newException(Exception, "matrix is not invertible")
   var b: Matrix[4]
   for row in 0..3:
     for col in 0..3:
@@ -213,8 +213,8 @@ proc rotationZ*(r: float): Matrix[4] {.inline.} =
    [0.0, 0.0, 0.0, 1.0]]
 
 proc shearing*(xy: float, xz: float, 
-              yx: float, yz: float, 
-              zx: float, zy: float): Matrix[4] {.inline.} =
+               yx: float, yz: float, 
+               zx: float, zy: float): Matrix[4] {.inline.} =
   [[1.0, xy, xz, 0.0],
    [yx, 1.0, yz, 0.0],
    [zx, zy, 1.0, 0.0],
@@ -226,29 +226,40 @@ proc ray*(origin: Vec4, direction: Vec4): Ray {.inline.} =
 proc position*(ray: Ray, t: float): Vec4 {.inline.} =
   ray.origin + ray.direction * t
 
-proc sphere*(): Sphere {.inline.} = Sphere()
-
-proc intersect*(obj: Sphere, ray: Ray): seq[Intersection] =
-  let
-    # the vector from the sphere's center to the ray's origin
-    # note: sphere is assumed to be at origin
-    sphereToRay = ray.origin - point(0, 0, 0)
-    a = dot(ray.direction, ray.direction)
-    b = 2 * dot(ray.direction, sphereToRay)
-    c = dot(sphereToRay, sphereToRay) - 1.0
-    discriminant = b * b - 4 * a * c
-  if discriminant < 0: 
-    return @[]
-  let
-    t1 = (-b - sqrt(discriminant)) / (2 * a)
-    t2 = (-b + sqrt(discriminant)) / (2 * a)
-  @[(t1, obj), (t2, obj)]
+proc sphere*(): Sphere {.inline.} = 
+  Sphere(transform: identity)
 
 proc intersection*(t: float, obj: Sphere): Intersection {.inline.} =
   (t, obj)
 
 proc intersections*(xs: varargs[Intersection]): seq[Intersection] {.inline.} =
-  @[(1.0, sphere()), (2.0, sphere())]
+  @(xs)
+
+proc hit*(xs: seq[Intersection]): Option[Intersection] {.inline.} =
+  var valid = filter(xs) do (i: Intersection) -> bool : i.t >= 0
+  if len(valid) == 0: return none(Intersection)
+  valid.sort do (x, y: Intersection) -> int: system.cmp(x.t, y.t)
+  return some(valid[0])
+
+proc transform*(ray: Ray, t: Matrix[4]): Ray {.inline.} =
+  (t * ray.origin, t * ray.direction)
+
+proc intersect*(obj: Sphere, ray: Ray): seq[Intersection] {.inline.} =
+  var tr = transform(ray, inverse(obj.transform))
+  let
+    # the vector from the sphere's center to the ray's origin
+    # note: sphere is assumed to be at origin
+    sphereToRay = tr.origin - point(0, 0, 0)
+    a = dot(tr.direction, tr.direction)
+    b = 2 * dot(tr.direction, sphereToRay)
+    c = dot(sphereToRay, sphereToRay) - 1.0
+    discriminant = b * b - 4 * a * c
+  if discriminant < 0: return @[]
+  let
+    t1 = (-b - sqrt(discriminant)) / (2 * a)
+    t2 = (-b + sqrt(discriminant)) / (2 * a)
+  @[(t1, obj), (t2, obj)]
 
 when isMainModule:
   echo("Hello, World!")
+ 

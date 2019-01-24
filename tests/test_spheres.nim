@@ -1,22 +1,6 @@
 import unittest, math, lmx
 
-suite "rays":
-  test "creating and querying a ray":
-    let
-      origin = point(1, 2, 3)
-      direction = vector(4, 5, 6)
-      r = ray(origin, direction)
-    check(r.origin =~ origin)
-    check(r.direction =~ direction)
-
-  test "computing a point from a distance":
-    let
-      r = ray(point(2, 3, 4), vector(1, 0, 0))
-    check(position(r, 0) =~ point(2, 3, 4))
-    check(position(r, 1) =~ point(3, 3, 4))
-    check(position(r, -1) =~ point(1, 3, 4))
-    check(position(r, 2.5) =~ point(4.5, 3, 4))
-
+suite "spheres":
   test "a ray intersects a sphere at two points":
     let
       r = ray(point(0, 0, -5), vector(0, 0, 1))
@@ -60,18 +44,39 @@ suite "rays":
     check(xs[0].t =~ -6.0)
     check(xs[1].t =~ -4.0)
 
-  test "translating a ray":
+  test "intersect sets the object on the intersection":
     let
-      r = ray(point(1, 2, 3), vector(0, 1, 0))
-      m = translation(3, 4, 5)
-      r2 = transform(r, m)
-    check(r2.origin =~ point(4, 6, 8))
-    check(r2.direction =~ vector(0, 1, 0))
+      r = ray(point(0, 0, -5), vector(0, 0, 1))
+      s = sphere()
+      xs = intersect(s, r)
+    check(len(xs) == 2)
+    check(xs[0].obj == s)
+    check(xs[1].obj == s)
 
-  test "scaling a ray":
+  test "a sphere's default transformation":
+    let s = sphere()
+    check(s.transform =~ identity)
+
+  test "changing the sphere's transformation":
+    let t = translation(2, 3, 4)
+    var s = sphere()
+    s.transform = t
+    check(s.transform == t)
+
+  test "intersecting a scaled sphere with a ray":
+    var s = sphere()
+    s.transform = scaling(2, 2, 2)
+    let 
+      r = ray(point(0, 0, -5), vector(0, 0, 1))
+      xs = intersect(s, r)
+    check(len(xs) == 2)
+    check(xs[0].t =~ 3.0)
+    check(xs[1].t =~ 7.0)
+
+  test "intersecting a translated sphere with a ray":
+    var s = sphere()
+    s.transform = translation(5, 0, 0)
     let
-      r = ray(point(1, 2, 3), vector(0, 1, 0))
-      m = scaling(2, 3, 4)
-      r2 = transform(r, m)
-    check(r2.origin =~ point(2, 6, 12))
-    check(r2.direction =~ vector(0, 3, 0))
+      r = ray(point(0, 0, -5), vector(0, 0, 1))
+      xs = intersect(s, r)
+    check(len(xs) == 0)

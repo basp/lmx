@@ -1,4 +1,4 @@
 # lmx
 Ray-tracing experiments.
 
-[current state](https://imgur.com/KiJvgiX)
+<img src="https://i.imgur.com/KiJvgiX.jpg"/>

@@ -1,3 +1,5 @@
+# Contains all of the lmx core libary.
+
 import os, math, sequtils, options, algorithm, times
 
 type
@@ -20,16 +22,16 @@ type
     eyev*: Vec4
     normalv*: Vec4
     inside*: bool
-               
+
 const identity* : Matrix[4] = [[1.0, 0.0, 0.0, 0.0],
                                [0.0, 1.0, 0.0, 0.0],
                                [0.0, 0.0, 1.0, 0.0],
                                [0.0, 0.0, 0.0, 1.0]]
 
-proc isPoint*(v: Vec4): bool {.inline.} =
+proc is_point*(v: Vec4): bool {.inline.} =
   v.w == 1.0
 
-proc isVector*(v: Vec4): bool {.inline.} =
+proc is_vector*(v: Vec4): bool {.inline.} =
   v.w == 0.0
 
 proc point*(x: float, y: float, z: float): Vec4 {.inline.} =
@@ -199,19 +201,19 @@ proc scaling*(x: float, y: float, z: float): Matrix[4] {.inline.} =
    [0.0, 0.0, z, 0.0],
    [0.0, 0.0, 0.0, 1.0]]
 
-proc rotationX*(r: float): Matrix[4] {.inline.} =
+proc rotation_x*(r: float): Matrix[4] {.inline.} =
   [[1.0, 0.0, 0.0, 0.0],
    [0.0, cos(r), -sin(r), 0.0],
    [0.0, sin(r), cos(r), 0.0],
    [0.0, 0.0, 0.0, 1.0]]
 
-proc rotationY*(r: float): Matrix[4] {.inline.} =
+proc rotation_y*(r: float): Matrix[4] {.inline.} =
   [[cos(r), 0.0, sin(r), 0.0],
    [0.0, 1.0, 0.0, 0.0],
    [-sin(r), 0.0, cos(r), 0.0],
    [0.0, 0.0, 0.0, 1.0]]
 
-proc rotationZ*(r: float): Matrix[4] {.inline.} =
+proc rotation_z*(r: float): Matrix[4] {.inline.} =
   [[cos(r), -sin(r), 0.0, 0.0],
    [sin(r), cos(r), 0.0, 0.0],
    [0.0, 0.0, 1.0, 0.0],

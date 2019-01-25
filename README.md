@@ -1,2 +1,4 @@
 # lmx
-Ray-tracing experiments
+Ray-tracing experiments.
+
+(current state)[https://imgur.com/KiJvgiX]

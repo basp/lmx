@@ -344,17 +344,17 @@ proc shade_hit*(world: World, comps: PrepComps): Color {.inline.} =
   lighting(comps.obj.material, world.light.get(), comps.point, comps.eyev, comps.normalv)
 
 when is_main_module:
-  # make sure we don't overflow colors (i.e. r, g, b > 255)
   proc clamp(value: int, min: int, max: int): int {.inline.} =
     if value < min: return min
     if value > max: return max
     value
 
   proc get_color_256(c: Color): tuple[r: int, g: int, b: int] =
+    # make sure we don't overflow colors (i.e. r, g, b > 255)
     let
-      r = int(255.99 * c.r).clamp(0, 255)
-      g = int(255.99 * c.g).clamp(0, 255)
-      b = int(255.99 * c.b).clamp(0, 255)
+        r = int(255.99 * c.r).clamp(0, 255)
+        g = int(255.99 * c.g).clamp(0, 255)
+        b = int(255.99 * c.b).clamp(0, 255)
     (r, g, b)
 
   var shape = sphere()

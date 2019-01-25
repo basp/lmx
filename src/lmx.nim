@@ -1,15 +1,26 @@
-import os, math, sequtils, options, algorithm
+import os, math, sequtils, options, algorithm, times
 
 type
   Vec4* = tuple[x: float, y: float, z: float, w: float]
   Color* = tuple[r: float, g: float, b: float]
-  Matrix*[N: static[int]] = array[0..N-1, array[0..N-1, float]]
+  Matrix*[N: static[int]] = array[0..pred(N), array[0..pred(N), float]]
   Ray* = tuple[origin: Vec4, direction: Vec4]
-  Sphere = object of RootObj
-    transform*: Matrix[4]
-  Intersection = tuple[t: float, obj: Sphere]
   PointLight = tuple[intensity: Color, position: Vec4]
-
+  Material = tuple[color: Color, ambient: float, diffuse: float, 
+                   specular: float, shininess: float]
+  Sphere = object
+    transform*: Matrix[4]
+    material*: Material
+  Intersection = tuple[t: float, obj: Sphere]
+  World = tuple[objects: seq[Sphere], light: Option[PointLight]]
+  PrepComps = ref object
+    t*: float
+    obj*: Sphere
+    point*: Vec4
+    eyev*: Vec4
+    normalv*: Vec4
+    inside*: bool
+               
 const identity* : Matrix[4] = [[1.0, 0.0, 0.0, 0.0],
                                [0.0, 1.0, 0.0, 0.0],
                                [0.0, 0.0, 1.0, 0.0],
@@ -98,49 +109,43 @@ proc col*[N](m: Matrix[N], col: int): Vec4 {.inline.} =
   (m[0][col], m[1][col], m[2][col], m[3][col])
 
 proc `=~`*[N](a, b: Matrix[N]): bool {.inline.} =
+  result = true
   for r in 0..N-1:
     for c in 0..N-1:
       if not (a[r][c] =~ b[r][c]):
-        return false
-  true     
+        result = false
 
 proc `*`*[N](a, b: Matrix[N]): Matrix[N] {.inline.} =
-  var z : Matrix[N]
   for r in 0..N-1:
     for c in 0..N-1:
-      z[r][c] = dot(row(a, r), col(b, c))
-  z
+      result[r][c] = dot(row(a, r), col(b, c))
 
 proc `*`*(a: Matrix[4], b: Vec4): Vec4 {.inline.} =
   (dot(row(a, 0), b), dot(row(a, 1), b), dot(row(a, 2), b), dot(row(a, 3), b))
 
 proc transpose*[N](a: Matrix[N]): Matrix[N] {.inline.} =
-  var b: Matrix[N]
   for r in 0..N-1:
     for c in 0..N-1:
-      b[c][r] = a[r][c]
-  b
-
-proc determinant*(a: Matrix[2]): float {.inline.} =
-  a[0][0] * a[1][1] - a[0][1] * a[1][0]
+      result[c][r] = a[r][c]
 
 proc submatrix[N, M](a: Matrix[N], row: int, col: int): Matrix[M] {.inline.} =
   let 
     idxs = toSeq 0..N-1
     rows = filter(idxs) do (i: int) -> bool : i != row
     cols = filter(idxs) do (i: int) -> bool : i != col
-  var b: Matrix[M]
   for r in 0..high(rows):
     for c in 0..high(cols):
-      b[r][c] = a[rows[r]][cols[c]]
-  b  
-
-proc submatrix*(a: Matrix[3], row: int, col: int): Matrix[2] {.inline.} =
-  submatrix[3, 2](a, row, col)
+      result[r][c] = a[rows[r]][cols[c]]
 
 proc submatrix*(a: Matrix[4], row: int, col: int): Matrix[3] {.inline.} =
   submatrix[4, 3](a, row, col)
+      
+proc submatrix*(a: Matrix[3], row: int, col: int): Matrix[2] {.inline.} =
+  submatrix[3, 2](a, row, col)
 
+proc determinant*(a: Matrix[2]): float {.inline.} =
+  a[0][0] * a[1][1] - a[0][1] * a[1][0]
+  
 proc minor*(a: Matrix[3], row: int, col: int): float {.inline.} =
   submatrix[3, 2](a, row, col).determinant()
 
@@ -176,12 +181,11 @@ proc isInvertible*(a: Matrix[4]): bool {.inline.} =
 proc inverse*(a: Matrix[4]): Matrix[4] =
   let d = determinant(a)
   if d =~ 0: raise newException(Exception, "matrix is not invertible")
-  var b: Matrix[4]
   for row in 0..3:
     for col in 0..3:
       let c = cofactor(a, row, col)
-      b[col][row] = c / d #transposed
-  b
+      # note that values are assigned transposed
+      result[col][row] = c / d
 
 proc translation*(x: float, y: float, z: float): Matrix[4] {.inline.} =
   [[1.0, 0.0, 0.0, x],
@@ -227,14 +231,12 @@ proc ray*(origin: Vec4, direction: Vec4): Ray {.inline.} =
 proc position*(ray: Ray, t: float): Vec4 {.inline.} =
   ray.origin + ray.direction * t
 
-proc sphere*(): Sphere {.inline.} = 
-  Sphere(transform: identity)
-
 proc intersection*(t: float, obj: Sphere): Intersection {.inline.} =
   (t, obj)
 
 proc intersections*(xs: varargs[Intersection]): seq[Intersection] {.inline.} =
-  @(xs)
+  result = @(xs)
+  result.sort do (x, y: Intersection) -> int: system.cmp(x.t, y.t)
 
 proc hit*(xs: seq[Intersection]): Option[Intersection] {.inline.} =
   var valid = filter(xs) do (i: Intersection) -> bool : i.t >= 0
@@ -249,7 +251,7 @@ proc intersect*(obj: Sphere, ray: Ray): seq[Intersection] {.inline.} =
   var tr = transform(ray, inverse(obj.transform))
   let
     # the vector from the sphere's center to the ray's origin
-    # note: sphere is assumed to be at origin
+    # note that sphere is assumed to be at origin
     sphereToRay = tr.origin - point(0, 0, 0)
     a = dot(tr.direction, tr.direction)
     b = 2 * dot(tr.direction, sphereToRay)
@@ -265,7 +267,7 @@ proc normalAt*(obj: Sphere, worldPoint: Vec4): Vec4 {.inline.} =
   let
     objPoint = inverse(obj.transform) * worldPoint
     objNormal = objPoint - point(0, 0, 0)
-  var worldNormal = transpose(inverse(obj.transform)) * objNormal
+  var worldNormal = inverse(obj.transform).transpose() * objNormal
   worldNormal.w = 0.0
   normalize(worldNormal)
 
@@ -275,46 +277,145 @@ proc reflect*(a: Vec4, normal: Vec4): Vec4 {.inline.} =
 proc pointLight*(position: Vec4, intensity: Color): PointLight {.inline.} =
   (intensity, position)
 
-when isMainModule:
-  proc getColor256(c: Color): tuple[r: int, g: int, b: int] =
+proc material*(): Material {.inline.} =
+  (color(1, 1, 1), 0.1, 0.9, 0.9, 200.0)
+
+proc sphere*(): Sphere {.inline.} = 
+  Sphere(transform: identity, material: material())
+
+proc lighting*(material: Material, light: PointLight, point: Vec4, 
+               eyev: Vec4, normalv: Vec4): Color {.inline.} =
+  let
+    effective_color = material.color * light.intensity
+    lightv = normalize(light.position - point)
+    ambient = effective_color * material.ambient
+    light_dot_normal = dot(lightv, normalv)
+  var
+    diffuse, specular: Color
+  if light_dot_normal >= 0:
+    diffuse = effective_color * material.diffuse * light_dot_normal
+    let 
+      reflectv = reflect(-lightv, normalv)
+      reflect_dot_eye = dot(reflectv, eyev)
+    if reflect_dot_eye > 0:
+      let factor = pow(reflect_dot_eye, material.shininess)
+      specular = light.intensity * material.specular * factor
+  ambient + diffuse + specular
+
+proc world*(): World {.inline.} = 
+  (@[], none(PointLight))
+
+proc default_world*(): World {.inline.} =
+  var  
+    s1 = sphere()
+    s2 = sphere()
+  let light = point_light(point(-10, 10, -10), color(1, 1, 1))
+  s1.material.color = color(0.8, 1.0, 0.6)
+  s1.material.diffuse = 0.7
+  s1.material.specular = 0.2
+  s2.transform = scaling(0.5, 0.5, 0.5)
+  (@[s1, s2], some(light))
+
+iterator world_intersections(world: World, ray: Ray): Intersection =
+  for obj in world.objects:
+    for x in intersect(obj, ray):
+      yield x
+
+proc intersect_world*(world: World, ray: Ray): seq[Intersection] =
+  toSeq(world_intersections(world, ray)).intersections()
+
+# t: float
+# obj: Sphere
+# point: Vec4
+# eyev: Vec4
+# normalv: Vec4
+
+proc prepare_computations*(x: Intersection, ray: Ray): PrepComps {.inline.} =
+  var
+    t = x.t
+    obj = x.obj
+    point = position(ray, t)
+    eyev = -ray.direction
+    normalv = normal_at(obj, point)
+    normalv_dot_eyev = dot(normalv, eyev)
+    inside = false
+  if normalv_dot_eyev < 0:
+    inside = true
+    normalv = -normalv
+  PrepComps(t: t, obj: obj, point: point, eyev: eyev, 
+            normalv: normalv, inside: inside)
+
+proc shade_hit*(world: World, comps: PrepComps): Color {.inline.} =
+  if world.light.isNone(): return color(0, 0, 0)
+  lighting(comps.obj.material, world.light.get(), comps.point, comps.eyev, comps.normalv)
+
+when is_main_module:
+  proc clamp(value: int, min: int, max: int): int {.inline.} =
+    if value < min: return min
+    if value > max: return max
+    value
+
+  proc get_color_256(c: Color): tuple[r: int, g: int, b: int] =
     let
-      r = int(255.99 * c.r)
-      g = int(255.99 * c.g)
-      b = int(255.99 * c.b)
+      r = int(255.99 * c.r).clamp(0, 255)
+      g = int(255.99 * c.g).clamp(0, 255)
+      b = int(255.99 * c.b).clamp(0, 255)
     (r, g, b)
 
   var shape = sphere()
   let
      c = color(1, 0, 0)
-     black = getColor256(color(0, 0, 0))
-     ic = getColor256(c)
-     wallZ = 10.0
-     wallSize = 7.0
-     canvasPixels = 100
-     pixelSize = wallSize / float(canvasPixels)
-     half = wallSize / 2
-     rayOrigin = point(0, 0, -5)
+     black = get_color_256(color(0, 0, 0))
+     wall_z = 10.0
+     wall_size = 7.0
+     canvas_pixels = 800
+     pixel_size = wall_size / float(canvas_pixels)
+     half = wall_size / 2
+     ray_origin = point(0, 0, -5)
      f = open("out.ppm", fmWrite)
+     light_position = point(-5, 10, -5)
+     light_color = color(1, 1, 1)
+     light = point_light(light_position, light_color)
+
+  shape.material = material()
+  shape.material.color = color(0.2, 0.8, 0.93)
+  shape.material.specular = 0.73
+  shape.material.ambient = 0.005
 
   #shape.transform = scaling(1, 0.5, 1)
+
   #shape.transform = scaling(0.5, 1, 1)
-  #shape.transform = rotation_z(PI / 4) * scaling(0.5, 1, 1) #remember, reverse application, scaling goes first
-  shape.transform = shearing(1, 0, 0, 0, 0, 0)
+
+  #remember, reverse application, scaling goes first
+  #shape.transform = rotation_z(PI / 4) * scaling(0.5, 1, 1) 
+
+  #shape.transform = shearing(1, 0, 0, 0, 0, 0)
 
   writeLine(f, "P3")
-  writeLine(f, canvasPixels, " ", canvasPixels)
+  writeLine(f, canvas_pixels, " ", canvas_pixels)
   writeLine(f, 255)
 
-  for y in 0..canvasPixels - 1:
-    let worldY = half - pixelSize * float(y)
-    for x in 0..canvasPIxels - 1:
+  let start = now()
+  for y in 0..pred(canvas_pixels):
+    let world_y = half - pixel_size * float(y)
+    for x in 0..pred(canvas_pixels):
       let 
-        worldX = -half + pixelSize * float(x)
-        position = point(worldX, worldY, wallZ)
-        r = ray(rayOrigin, normalize(position - rayOrigin))
+        world_x = -half + pixel_size * float(x)
+        position = point(world_x, world_y, wall_z)
+        r = ray(ray_origin, normalize(position - ray_origin))
         xs = intersect(shape, r)
-        h = hit(xs)
-      if h.isSome():
+        maybe_hit = hit(xs)
+      if maybe_hit.is_some():
+        let 
+          h = maybe_hit.get()
+          point = position(r, h.t)
+          normal = normal_at(h.obj, point)
+          eye = -r.direction
+          color = lighting(h.obj.material, light, point, eye, normal)
+          ic = get_color_256(color)
         writeLine(f, ic.r, " ", ic.g, " ", ic.b)
       else:
         writeLIne(f, black.r, " ", black.g, " ", black.b)
+  let finish = now()
+  let duration = finish - start
+  echo duration

@@ -84,41 +84,55 @@ suite "spheres":
   test "the normal on a sphere at a point on the x-axis":
     let 
       s = sphere()
-      n = normalAt(s, point(1, 0, 0))
+      n = normal_at(s, point(1, 0, 0))
     check(n =~ vector(1, 0, 0))
 
   test "the normal on a sphere at a point on the y-axis":
     let 
       s = sphere()
-      n = normalAt(s, point(0, 1, 0))
+      n = normal_at(s, point(0, 1, 0))
     check(n =~ vector(0, 1, 0))
 
   test "the normal on a sphere at a point on the z-axis":
     let 
       s = sphere()
-      n = normalAt(s, point(0, 0, 1))
+      n = normal_at(s, point(0, 0, 1))
     check(n =~ vector(0, 0, 1))
 
   test "the normal on a sphere at a non-axial point":
     let 
       s = sphere()
-      n = normalAt(s, point(sqrt(3.0) / 3, sqrt(3.0) / 3, sqrt(3.0) / 3))
+      n = normal_at(s, point(sqrt(3.0) / 3, sqrt(3.0) / 3, sqrt(3.0) / 3))
     check(n =~ vector(sqrt(3.0) / 3, sqrt(3.0) / 3, sqrt(3.0) / 3))
 
   test "the normal is a normalized vector":
     let 
       s = sphere()
-      n = normalAt(s, point(sqrt(3.0) / 3, sqrt(3.0) / 3, sqrt(3.0) / 3))
+      n = normal_at(s, point(sqrt(3.0) / 3, sqrt(3.0) / 3, sqrt(3.0) / 3))
     check(n =~ normalize(n))
 
   test "computing the normal on a translated sphere":
     var s = sphere()
     s.transform = translation(0, 1, 0)
-    let n = normalAt(s, point(0, 1.70711, -0.70711))
+    let n = normal_at(s, point(0, 1.70711, -0.70711))
     check(n =~ vector(0, 0.70711, -0.70711))
   
   test "computing the nomral on a transformed sphere":
     var s = sphere()
     s.transform = scaling(1, 0.5, 1) * rotationZ(PI/5)
-    let n = normalAt(s, point(0, sqrt(2.0) / 2, -sqrt(2.0) / 2))
+    let n = normal_at(s, point(0, sqrt(2.0) / 2, -sqrt(2.0) / 2))
     check(n =~ vector(0, 0.97014, -0.24254))
+
+  test "a sphere has a default material":
+    let 
+      s = sphere()
+      m = s.material
+    check(m == material())
+    
+  test "a sphere may be assigned a material":
+    var 
+      s = sphere()
+      m = material()
+    m.ambient = 1
+    s.material = m
+    check(s.material == m)

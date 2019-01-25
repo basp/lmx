@@ -5,6 +5,6 @@ suite "lights":
         let
             intensity = color(1, 1, 1)
             pos = point(0, 0, 0)
-            light = pointLight(pos, intensity)
+            light = point_light(pos, intensity)
         check(light.position == pos)
         check(light.intensity == intensity)

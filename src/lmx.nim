@@ -324,12 +324,6 @@ iterator world_intersections(world: World, ray: Ray): Intersection =
 proc intersect_world*(world: World, ray: Ray): seq[Intersection] =
   toSeq(world_intersections(world, ray)).intersections()
 
-# t: float
-# obj: Sphere
-# point: Vec4
-# eyev: Vec4
-# normalv: Vec4
-
 proc prepare_computations*(x: Intersection, ray: Ray): PrepComps {.inline.} =
   var
     t = x.t
@@ -350,6 +344,7 @@ proc shade_hit*(world: World, comps: PrepComps): Color {.inline.} =
   lighting(comps.obj.material, world.light.get(), comps.point, comps.eyev, comps.normalv)
 
 when is_main_module:
+  # make sure we don't overflow colors (i.e. r, g, b > 255)
   proc clamp(value: int, min: int, max: int): int {.inline.} =
     if value < min: return min
     if value > max: return max

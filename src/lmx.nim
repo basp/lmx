@@ -12,7 +12,7 @@ type
     transform*: Matrix[4]
     material*: Material
   Intersection = tuple[t: float, obj: Sphere]
-  World = tuple[objects: seq[Sphere], light: Option[PointLight]]
+  World = tuple[objects: seq[Sphere], lights: seq[PointLight]]
   PrepComps = ref object
     t*: float
     obj*: Sphere
@@ -303,7 +303,7 @@ proc lighting*(material: Material, light: PointLight, point: Vec4,
   ambient + diffuse + specular
 
 proc world*(): World {.inline.} = 
-  (@[], none(PointLight))
+  (@[], @[])
 
 proc default_world*(): World {.inline.} =
   var  
@@ -314,7 +314,7 @@ proc default_world*(): World {.inline.} =
   s1.material.diffuse = 0.7
   s1.material.specular = 0.2
   s2.transform = scaling(0.5, 0.5, 0.5)
-  (@[s1, s2], some(light))
+  (@[s1, s2], @[light])
 
 iterator world_intersections(world: World, ray: Ray): Intersection =
   for obj in world.objects:
@@ -340,8 +340,8 @@ proc prepare_computations*(x: Intersection, ray: Ray): PrepComps {.inline.} =
             normalv: normalv, inside: inside)
 
 proc shade_hit*(world: World, comps: PrepComps): Color {.inline.} =
-  if world.light.isNone(): return color(0, 0, 0)
-  lighting(comps.obj.material, world.light.get(), comps.point, comps.eyev, comps.normalv)
+  if len(world.lights) == 0: return color(0, 0, 0)
+  lighting(comps.obj.material, world.lights[0], comps.point, comps.eyev, comps.normalv)
 
 when is_main_module:
   proc clamp(value: int, min: int, max: int): int {.inline.} =

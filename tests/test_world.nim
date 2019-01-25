@@ -4,7 +4,7 @@ suite "world":
   test "creating a world":
     let w = world()
     check(len(w.objects) == 0)
-    check(w.light.is_none())
+    check(len(w.lights) == 0)
 
   test "the default world":
     let 
@@ -17,8 +17,8 @@ suite "world":
     s1.material.diffuse = 0.7
     s1.material.specular = 0.2
     s2.transform = scaling(0.5, 0.5, 0.5)
-    check(w.light.is_some())
-    check(w.light.get() == light)
+    check(len(w.lights) > 0)
+    check(w.lights[0] == light)
     check(count(w.objects, s1) == 1)
     check(count(w.objects, s2) == 1)
 
@@ -48,7 +48,7 @@ suite "world":
       r = ray(point(0, 0, 0), vector(0, 0, 1))
       shape = w.objects[1]
       i = intersection(0.5, shape)
-    w.light = point_light(point(0, 0.25, 0), color(1, 1, 1)).some()
+    w.lights = @[point_light(point(0, 0.25, 0), color(1, 1, 1))]
     let
       comps = prepare_computations(i, r)
       c = shade_hit(w, comps)

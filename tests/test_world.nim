@@ -10,13 +10,14 @@ suite "world":
     let 
       w = default_world()
       light = point_light(point(-10, 10, -10), color(1, 1, 1))
-    var
-      s1 = sphere()
-      s2 = sphere()
-    s1.material.color = color(0.8, 1.0, 0.6)
-    s1.material.diffuse = 0.7
-    s1.material.specular = 0.2
-    s2.transform = scaling(0.5, 0.5, 0.5)
+    check(len(w.objects) == 2)
+    let
+      s1 = w.objects[0]
+      s2 = w.objects[1]
+    check(s1.material.color == color(0.8, 1.0, 0.6))
+    check(s1.material.diffuse == 0.7)
+    check(s1.material.specular == 0.2)
+    check(s2.transform == scaling(0.5, 0.5, 0.5))
     check(len(w.lights) > 0)
     check(w.lights[0] == light)
     check(count(w.objects, s1) == 1)
@@ -54,3 +55,27 @@ suite "world":
       c = shade_hit(w, comps)
     checK(c =~ color(0.90498, 0.90498, 0.90498))
 
+  test "the color when a ray misses":
+    let 
+      w = default_world()
+      r = ray(point(0, 0, -5), vector(0, 1, 0))
+      c = color_at(w, r)
+    check(c =~ color(0, 0, 0))
+
+  test "the color when a ray hits":
+    let
+      w = default_world()
+      r = ray(point(0, 0, -5), vector(0, 0, 1))
+      c = color_at(w, r)
+    check(c =~ color(0.38066, 0.47583, 0.2855))
+
+  test "the color with an intersection behind the ray":
+    var
+      w = default_world()
+      outer = w.objects[0]
+      inner = w.objects[1]
+      r = ray(point(0, 0, 0.75), vector(0, 0, -1))
+    outer.material.ambient = 1
+    inner.material.ambient = 1
+    let c = color_at(w, r)
+    check(c == inner.material.color)

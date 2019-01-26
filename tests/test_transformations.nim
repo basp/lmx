@@ -126,3 +126,38 @@ suite "transformations":
       p = point(1, 0, 1)    
       T = C * B * A
     check(T * p =~ point(15, 0, 7))
+
+  test "the transformation matrix for the default orientation":
+    let
+      `from` = point(0, 0, 0)
+      to = point(0, 0, -1)
+      up = vector(0, 1, 0)
+      t = view_transform(`from`, to, up)
+    check(t =~ identity)
+  
+  test "a view transformation matrix looking in positive z direction":
+    let
+      `from` = point(0, 0, 0)
+      to = point(0, 0, 1)
+      up = vector(0, 1, 0)
+      t = view_transform(`from`, to, up)
+    check(t =~ scaling(-1, 1, -1))
+
+  test "the view transformation moves the world":
+    let
+      `from` = point(0, 0, 8)
+      to = point(0, 0, 0)
+      up = vector(0, 1, 0)
+      t = view_transform(`from`, to, up)
+    check(t =~ translation(0, 0, -8))
+
+  test "an arbitrary view transformation":
+    let
+      `from` = point(1, 3, 2)
+      to = point(4, -2, 8)
+      up = vector(1, 1, 0)
+      t = view_transform(`from`, to, up)
+    check(t =~ [[-0.50709, 0.50709, 0.67612, -2.36643],
+                [0.76772, 0.60609, 0.12122, -2.82843],
+                [-0.35857, 0.59761, -0.71714, 0.00000],
+                [0.00000, 0.00000, 0.00000, 1.00000]])

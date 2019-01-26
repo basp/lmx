@@ -5,28 +5,44 @@ import os, math, sequtils, options, algorithm, times
 type
   Vec4* = tuple[x: float, y: float, z: float, w: float]
   Color* = tuple[r: float, g: float, b: float]
-  Matrix*[N: static[int]] = array[0..pred(N), array[0..pred(N), float]]
+  Matrix*[N: static int] = array[0..pred(N), array[0..pred(N), float]]
   Ray* = tuple[origin: Vec4, direction: Vec4]
   PointLight = tuple[intensity: Color, position: Vec4]
   Material = tuple[color: Color, ambient: float, diffuse: float, 
                    specular: float, shininess: float]
-  Sphere = object
+  Sphere = ref object
     transform*: Matrix[4]
     material*: Material
   Intersection = tuple[t: float, obj: Sphere]
   World = tuple[objects: seq[Sphere], lights: seq[PointLight]]
-  PrepComps = ref object
+  PrepComps = object
     t*: float
     obj*: Sphere
     point*: Vec4
     eyev*: Vec4
     normalv*: Vec4
     inside*: bool
+  Camera = ref object
+    hsize*: int
+    vsize*: int
+    fov*: float
+    transform*: Matrix[4]
+    pixel_size*: float
+    half_width: float
+    half_height: float
+  Canvas = ref object
+    hsize: int
+    vsize: int
+    pixels: seq[Color]
 
-const identity* : Matrix[4] = [[1.0, 0.0, 0.0, 0.0],
-                               [0.0, 1.0, 0.0, 0.0],
-                               [0.0, 0.0, 1.0, 0.0],
-                               [0.0, 0.0, 0.0, 1.0]]
+const 
+  BLACK*: Color = (0.0, 0.0, 0.0)
+  WHITE*: Color = (1.0, 1.0, 1.0)
+
+const identity*: Matrix[4] = [[1.0, 0.0, 0.0, 0.0],
+                              [0.0, 1.0, 0.0, 0.0],
+                              [0.0, 0.0, 1.0, 0.0],
+                              [0.0, 0.0, 0.0, 1.0]]
 
 proc is_point*(v: Vec4): bool {.inline.} =
   v.w == 1.0
@@ -342,8 +358,78 @@ proc prepare_computations*(x: Intersection, ray: Ray): PrepComps {.inline.} =
             normalv: normalv, inside: inside)
 
 proc shade_hit*(world: World, comps: PrepComps): Color {.inline.} =
-  if len(world.lights) == 0: return color(0, 0, 0)
-  lighting(comps.obj.material, world.lights[0], comps.point, comps.eyev, comps.normalv)
+  result = BLACK
+  for light in world.lights:
+    result = result + lighting(comps.obj.material, light, comps.point, comps.eyev, comps.normalv)
+
+proc color_at*(world: World, ray: Ray): Color {.inline.} =
+  let 
+    xs = intersect_world(world, ray)
+    maybeHit = hit(xs)
+  if maybeHit.is_none(): return BLACK
+  let 
+    hit = maybeHit.get()
+    comps = prepare_computations(hit, ray)
+  shade_hit(world, comps)
+
+proc view_transform*(`from`: Vec4, to: Vec4, up: Vec4): Matrix[4] {.inline.} =
+  let 
+    forward = normalize(to - `from`)
+    upn = normalize(up)
+    left = cross(forward, upn)
+    true_up = cross(left, forward)
+  result = [[left.x, left.y, left.z, 0.0],
+            [true_up.x, true_up.y, true_up.z, 0.0],
+            [-forward.x, -forward.y, -forward.z, 0.0],
+            [0.0, 0.0, 0.0, 1.0]]
+  result = result * translation(-`from`.x, -`from`.y, -`from`.z)
+
+proc camera*(hsize: int, vsize: int, fov: float): Camera {.inline.} =
+  let 
+    half_view = tan(fov / 2)
+    aspect = hsize / vsize
+    half_width = if aspect >= 1: half_view else: half_view * aspect
+    half_height = if aspect >= 1: half_view / aspect else: half_view
+    pixel_size = (half_width * 2) / float(hsize)
+  Camera(hsize: hsize, vsize: vsize, fov: fov, 
+         transform: identity, pixel_size: pixel_size,
+         half_width: half_width, half_height: half_height)
+
+proc ray_for_pixel*(camera: Camera, px: int, py: int): Ray {.inline.} =
+  let 
+    xoffset = (float(px) + 0.5) * camera.pixel_size
+    yoffset = (float(py) + 0.5) * camera.pixel_size
+    world_x = camera.half_width - xoffset
+    world_y = camera.half_height - yoffset
+    pixel = inverse(camera.transform) * point(world_x, world_y, -1)
+    origin = inverse(camera.transform) * point(0, 0, 0)
+    direction = normalize(pixel - origin)
+  ray(origin, direction)
+
+proc canvas*(hsize: int, vsize: int): Canvas {.inline.} =
+  let pixels = newSeq[Color](hsize * vsize)
+  Canvas(hsize: hsize, vsize: vsize, pixels: pixels)
+
+proc write_pixel(canvas: Canvas, x: int, y: int, color: Color) {.inline.} =
+  let i = y * canvas.hsize + x
+  canvas.pixels[i] = color
+
+proc render*(camera: Camera, world: World): Canvas =
+  result = canvas(camera.hsize, camera.vsize)
+  for y in 0..pred(camera.vsize):
+    let start = now()
+    for x in 0..pred(camera.hsize):
+      let
+        ray = ray_for_pixel(camera, x, y)
+        color = color_at(world, ray)
+      write_pixel(result, x, y, color)
+    let 
+      finish = now()
+      dur = finish - start
+    echo "row ", succ(y), " of ", camera.vsize, " (", dur.milliseconds(), " ms)"
+
+proc pixel_at*(canvas: Canvas, x: int, y: int): Color {.inline.} =
+  canvas.pixels[y * canvas.hsize + x]
 
 when is_main_module:
   proc clamp(value: int, min: int, max: int): int {.inline.} =
@@ -351,7 +437,7 @@ when is_main_module:
     if value > max: return max
     value
 
-  proc get_color_256(c: Color): tuple[r: int, g: int, b: int] =
+  proc getRGB(c: Color): tuple[r: int, g: int, b: int] =
     # make sure we don't overflow colors (i.e. r, g, b > 255)
     let
         r = int(255.99 * c.r).clamp(0, 255)
@@ -359,60 +445,72 @@ when is_main_module:
         b = int(255.99 * c.b).clamp(0, 255)
     (r, g, b)
 
-  var shape = sphere()
-  let
-     c = color(1, 0, 0)
-     black = get_color_256(color(0, 0, 0))
-     wall_z = 10.0
-     wall_size = 7.0
-     canvas_pixels = 800
-     pixel_size = wall_size / float(canvas_pixels)
-     half = wall_size / 2
-     ray_origin = point(0, 0, -5)
-     f = open("out.ppm", fmWrite)
-     light_position = point(-5, 10, -5)
-     light_color = color(1, 1, 1)
-     light = point_light(light_position, light_color)
+  var w = world()
 
-  shape.material = material()
-  shape.material.color = color(0.2, 0.8, 0.93)
-  shape.material.specular = 0.73
-  shape.material.ambient = 0.005
+  let floor = sphere()
+  floor.transform = scaling(10, 0.01, 10)
+  floor.material = material()
+  floor.material.color = color(1, 0.9, 0.9)
+  floor.material.specular = 0
 
-  #shape.transform = scaling(1, 0.5, 1)
+  let left_wall = sphere()
+  left_wall.transform = translation(0, 0, 5) *
+                        rotation_y(-PI / 4) *
+                        rotation_x(PI / 2) *
+                        scaling(10, 0.01, 10)
+  left_wall.material = floor.material
 
-  #shape.transform = scaling(0.5, 1, 1)
+  let right_wall = sphere()
+  right_wall.transform = translation(0, 0, 5) *
+                         rotation_y(PI / 4) *
+                         rotation_x(PI / 2) *
+                         scaling(10, 0.01, 10)
+  right_wall.material = floor.material
 
-  #remember, reverse application, scaling goes first
-  #shape.transform = rotation_z(PI / 4) * scaling(0.5, 1, 1) 
+  let middle = sphere()
+  middle.transform = translation(-0.5, 1, 0.5)
+  middle.material = material()
+  middle.material.color = color(0.1, 1, 0.5)
+  middle.material.diffuse = 0.7
+  middle.material.specular = 0.3
 
-  #shape.transform = shearing(1, 0, 0, 0, 0, 0)
+  let right = sphere()
+  right.transform = translation(1.5, 0.5, -0.5) *
+                    scaling(0.5, 0.5, 0.5)
+  right.material = material()
+  right.material.color = color(0.5, 1, 0.1)
+  right.material.diffuse = 0.7
+  right.material.specular = 0.3
 
-  writeLine(f, "P3")
-  writeLine(f, canvas_pixels, " ", canvas_pixels)
-  writeLine(f, 255)
+  let left = sphere()
+  left.transform = translation(-1.5, 0.33, -0.75) *
+                   scaling(0.33, 0.33, 0.33)
+  left.material = material()
+  left.material.color = color(1, 0.8, 0.1)
+  left.material.diffuse = 0.7
+  left.material.specular = 0.3
 
+  let light = point_light(point(-10, 10, -10), color(1, 1, 1))
+  w.lights = @[light]
+  w.objects = @[floor, left_wall, right_wall, middle, right, left]
+
+  let c = camera(800, 400, PI / 3)
+  c.transform = view_transform(point(0, 1.5, -5),
+                               point(0, 1, 0),
+                               vector(0, 1, 0))
+  
   let start = now()
-  for y in 0..pred(canvas_pixels):
-    let world_y = half - pixel_size * float(y)
-    for x in 0..pred(canvas_pixels):
-      let 
-        world_x = -half + pixel_size * float(x)
-        position = point(world_x, world_y, wall_z)
-        r = ray(ray_origin, normalize(position - ray_origin))
-        xs = intersect(shape, r)
-        maybe_hit = hit(xs)
-      if maybe_hit.is_some():
-        let 
-          h = maybe_hit.get()
-          point = position(r, h.t)
-          normal = normal_at(h.obj, point)
-          eye = -r.direction
-          color = lighting(h.obj.material, light, point, eye, normal)
-          ic = get_color_256(color)
-        writeLine(f, ic.r, " ", ic.g, " ", ic.b)
-      else:
-        writeLIne(f, black.r, " ", black.g, " ", black.b)
+  let img = render(c, w)
+  let f = open("out.ppm", fmWrite)
+  write_line(f, "P3")
+  write_line(f, img.hsize, " ", img.vsize)
+  write_line(f, 255)
+
+  for y in 0..pred(img.vsize):
+    for x in 0..pred(img.hsize):
+      let rgb = pixel_at(img, x, y).getRGB()
+      write_line(f, rgb.r, " ", rgb.g, " ", rgb.b)
+
   let finish = now()
   let duration = finish - start
   echo duration

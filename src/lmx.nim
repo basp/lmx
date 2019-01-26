@@ -193,7 +193,7 @@ proc determinant*(a: Matrix[4]): float {.inline.} =
     w = a[0][3] * cofactor(a, 0, 3)
   x + y + z + w
 
-proc isInvertible*(a: Matrix[4]): bool {.inline.} =
+proc is_invertible*(a: Matrix[4]): bool {.inline.} =
   not (determinant(a) =~ 0)
 
 proc inverse*(a: Matrix[4]): Matrix[4] =
@@ -270,10 +270,10 @@ proc intersect*(obj: Sphere, ray: Ray): seq[Intersection] {.inline.} =
   let
     # the vector from the sphere's center to the ray's origin
     # note that sphere is assumed to be at origin
-    sphereToRay = tr.origin - point(0, 0, 0)
+    sphere_to_ray = tr.origin - point(0, 0, 0)
     a = dot(tr.direction, tr.direction)
-    b = 2 * dot(tr.direction, sphereToRay)
-    c = dot(sphereToRay, sphereToRay) - 1.0
+    b = 2 * dot(tr.direction, sphere_to_ray)
+    c = dot(sphere_to_ray, sphere_to_ray) - 1.0
     discriminant = b * b - 4 * a * c
   if discriminant < 0: return @[]
   let
@@ -281,13 +281,13 @@ proc intersect*(obj: Sphere, ray: Ray): seq[Intersection] {.inline.} =
     t2 = (-b + sqrt(discriminant)) / (2 * a)
   @[(t1, obj), (t2, obj)]
 
-proc normalAt*(obj: Sphere, worldPoint: Vec4): Vec4 {.inline.} =
+proc normalAt*(obj: Sphere, world_point: Vec4): Vec4 {.inline.} =
   let
-    objPoint = inverse(obj.transform) * worldPoint
-    objNormal = objPoint - point(0, 0, 0)
-  var worldNormal = inverse(obj.transform).transpose() * objNormal
-  worldNormal.w = 0.0
-  normalize(worldNormal)
+    obj_point = inverse(obj.transform) * world_point
+    obj_normal = objPoint - point(0, 0, 0)
+  var world_normal = inverse(obj.transform).transpose() * obj_normal
+  world_normal.w = 0.0
+  normalize(world_normal)
 
 proc reflect*(a: Vec4, normal: Vec4): Vec4 {.inline.} =
   a - normal * 2 * dot(a, normal)
@@ -494,7 +494,7 @@ when is_main_module:
   w.lights = @[light]
   w.objects = @[floor, left_wall, right_wall, middle, right, left]
 
-  let c = camera(800, 400, PI / 3)
+  let c = camera(3840, 2160, PI / 3)
   c.transform = view_transform(point(0, 1.5, -5),
                                point(0, 1, 0),
                                vector(0, 1, 0))

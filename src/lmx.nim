@@ -292,7 +292,7 @@ proc normalAt*(obj: Sphere, world_point: Vec4): Vec4 {.inline.} =
 proc reflect*(a: Vec4, normal: Vec4): Vec4 {.inline.} =
   a - normal * 2 * dot(a, normal)
 
-proc pointLight*(position: Vec4, intensity: Color): PointLight {.inline.} =
+proc point_light*(position: Vec4, intensity: Color): PointLight {.inline.} =
   (intensity, position)
 
 proc material*(): Material {.inline.} =
@@ -365,10 +365,10 @@ proc shade_hit*(world: World, comps: PrepComps): Color {.inline.} =
 proc color_at*(world: World, ray: Ray): Color {.inline.} =
   let 
     xs = intersect_world(world, ray)
-    maybeHit = hit(xs)
-  if maybeHit.is_none(): return BLACK
+    maybe_hit = hit(xs)
+  if maybe_hit.is_none(): return BLACK
   let 
-    hit = maybeHit.get()
+    hit = maybe_hit.get()
     comps = prepare_computations(hit, ray)
   shade_hit(world, comps)
 

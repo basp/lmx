@@ -1,4 +1,5 @@
-import os, math, sequtils, options, algorithm, times
+import os, math, sequtils, options, algorithm, times, random
+{.experimental: "parallel".}
 
 type
   Vec4* = tuple[x: float, y: float, z: float, w: float]
@@ -11,6 +12,8 @@ type
     b*: Color
     transform*: Matrix[4]
   Stripes = ref object of Pattern
+  Rings = ref object of Pattern
+  Checkers = ref object of Pattern
   Gradient = ref object of Pattern
   Material = tuple[color: Color, ambient: float, diffuse: float, 
                    specular: float, shininess: float, pattern: Option[Pattern]]
@@ -111,6 +114,9 @@ proc `*`*(a: Color, b: Color): Color {.inline.} =
 proc `/`*(a: Vec4, c: float): Vec4 {.inline.} =
   (a.x / c, a.y / c, a.z / c, a.w / c)
 
+proc `/`*(a: Color, c: float): Color {.inline.} =
+  (a.r / c, a.g / c, a.b / c)
+
 proc magnitude*(a: Vec4): float {.inline.} =
   sqrt(a.x * a.x + a.y * a.y + a.z * a.z + a.w * a.w)
 
@@ -207,7 +213,7 @@ proc is_invertible*(a: Matrix[4]): bool {.inline.} =
 
 proc inverse*(a: Matrix[4]): Matrix[4] =
   let d = determinant(a)
-  if d =~ 0: raise newException(Exception, "matrix is not invertible")
+  if d == 0: raise newException(Exception, "matrix is not invertible")
   for row in 0..3:
     for col in 0..3:
       let c = cofactor(a, row, col)
@@ -353,11 +359,29 @@ proc stripe_pattern*(a: Color, b: Color): Stripes {.inline.} =
 proc gradient_pattern*(a: Color, b: Color): Gradient {.inline.} =
   Gradient(a: a, b: b, transform: identity)
 
+proc ring_pattern*(a: Color, b: Color): Rings {.inline.} =
+  Rings(a: a, b: b, transform: identity)
+
+proc checkers_pattern*(a: Color, b: Color): Checkers {.inline.} =
+  Checkers(a: a, b: b)
+
 method pattern_at*(pat: Pattern,  p: Vec4): Color {.base.} =
   return
 
 method pattern_at*(pat: Stripes, p: Vec4): Color {.inline.} =
   stripe_at(pat, p)
+
+method pattern_at*(pat: Rings, p: Vec4): Color {.inline.} =
+  if floor(sqrt(p.x * p.x + p.z * p.z)) mod 2 == 0:
+    return pat.a
+  else:
+    return pat.b
+
+method pattern_at*(pat: Checkers, p: Vec4): Color {.inline.} =
+    if (floor(p.x) + floor(p.y) + floor(p.z)) mod 2 == 0:
+      return pat.a
+    else:
+      return pat.b
 
 method pattern_at*(pat: Gradient, p: Vec4): Color =
   let
@@ -503,6 +527,33 @@ proc write_pixel(canvas: Canvas, x: int, y: int, color: Color) {.inline.} =
   let i = y * canvas.hsize + x
   canvas.pixels[i] = color
 
+proc render_antialias(camera: Camera, world: World): Canvas =
+  result = canvas(camera.hsize, camera.vsize)
+  for y in 0..pred(camera.vsize):
+    let start = now()
+    for x in 0..pred(camera.hsize):
+      let
+         r0 = ray_for_pixel(camera, x, y)
+         r1 = ray_for_pixel(camera, pred(x), pred(y))
+         r2 = ray_for_pixel(camera, pred(x), succ(y))
+         r3 = ray_for_pixel(camera, succ(x), pred(y))
+         r4 = ray_for_pixel(camera, succ(x), succ(y))
+         c0 = color_at(world, r0)
+         c1 = color_at(world, r1)
+         c2 = color_at(world, r2)
+         c3 = color_at(world, r3)
+         c4 = color_at(world, r4)
+         color = (c0 + c1 + c2 + c3 + c4) / 5.0
+      # let 
+      #   ray = ray_for_pixel(camera, x, y)
+      #   color = color_at(world, ray)
+      write_pixel(result, x, y, color)
+    let 
+      finish = now()
+      dur = finish - start
+    if isMainModule:
+      echo succ(y), "/", camera.vsize, " (", dur, ")"  
+
 proc render*(camera: Camera, world: World): Canvas =
   result = canvas(camera.hsize, camera.vsize)
   for y in 0..pred(camera.vsize):
@@ -516,7 +567,7 @@ proc render*(camera: Camera, world: World): Canvas =
       finish = now()
       dur = finish - start
     if isMainModule:
-      echo "row ", succ(y), "/", camera.vsize, " (", dur.milliseconds(), " ms)"
+      echo succ(y), "/", camera.vsize, " (", dur, ")"
 
 proc pixel_at*(canvas: Canvas, x: int, y: int): Color {.inline.} =
   canvas.pixels[y * canvas.hsize + x]
@@ -549,18 +600,21 @@ when is_main_module:
   # make sure to transform it so the gradient won't overflow
   g1.transform = translation(-1, 0, 0) * scaling(2, 2, 2)
 
+  var checkers = checkers_pattern(color(0.8, 0.1, 0.8), color(0, 0, 0))
+  checkers.transform = scaling(2, 2, 2)
+
   let floor: Shape = plane()
   floor.material = material()
   floor.material.color = color(1, 0.9, 0.9)
   floor.material.specular = 0
-  floor.material.pattern = some(Pattern(red_grey_stripes))
+  floor.material.pattern = some(Pattern(checkers))
 
   let backdrop: Shape = plane()
   backdrop.material = material()
   backdrop.material.color = color(0.2, 0.3, 1.0)
   backdrop.material.specular = 0
   backdrop.material.pattern = some(Pattern(red_grey_stripes))
-  backdrop.transform = translation(0, 0, 2) * 
+  backdrop.transform = translation(0, 0, 3.3) * 
                        rotation_x(-PI / 2)
 
   let middle: Shape = sphere()
@@ -593,12 +647,12 @@ when is_main_module:
   w.objects = @[floor, backdrop, middle, right, left]
 
   let c = camera(1280, 1024, PI / 3)
-  c.transform = view_transform(point(0, 1.5, -5),
-                               point(0, 1, 0),
+  c.transform = view_transform(point(1.1, 1.4, -4),
+                               point(0, 0.5, 0),
                                vector(0, 1, 0))
   
   let start = now()
-  let img = render(c, w)
+  let img = render_antialias(c, w)
   let f = open("out.ppm", fmWrite)
   write_line(f, "P3")
   write_line(f, img.hsize, " ", img.vsize)

@@ -109,3 +109,28 @@ suite "patterns":
     check(pattern_at(pat, point(0.25, 0, 0)) =~ color(0.75, 0.75, 0.75))
     check(pattern_at(pat, point(0.5, 0, 0)) =~ color(0.5, 0.5, 0.5))
     check(pattern_at(pat, point(0.75, 0, 0)) =~ color(0.25, 0.25, 0.25))
+
+  test "a ring should extend in both x and z":
+    let pat = ring_pattern(white, black)
+    check(pattern_at(pat, point(0, 0, 0)) =~ white)
+    check(pattern_at(pat, point(1, 0, 0)) =~ black)
+    check(pattern_at(pat, point(0, 0, 1)) =~ black)
+    check(pattern_at(pat, point(0.708, 0, 0.708)) =~ black)
+
+  test "checkers should repeat in x":
+    let pat = checkers_pattern(white, black)
+    check(pattern_at(pat, point(0, 0, 0)) =~ white)
+    check(pattern_at(pat, point(0.99, 0, 0)) =~ white)
+    check(pattern_at(pat, point(1.01, 0, 0)) =~ black)
+
+  test "checkers should repeat in y":    
+    let pat = checkers_pattern(white, black)
+    check(pattern_at(pat, point(0, 0, 0)) =~ white)
+    check(pattern_at(pat, point(0, 0.99, 0)) =~ white)
+    check(pattern_at(pat, point(0, 1.01, 0)) =~ black)
+
+  test "checkers should repeat in z":    
+    let pat = checkers_pattern(white, black)
+    check(pattern_at(pat, point(0, 0, 0)) =~ white)
+    check(pattern_at(pat, point(0, 0, 0.99)) =~ white)
+    check(pattern_at(pat, point(0, 0, 1.01)) =~ black)

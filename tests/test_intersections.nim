@@ -90,3 +90,15 @@ suite "intersections":
     check(comps.inside)
     # normal would have been (0, 0, 1) but is inverted
     check(comps.normalv =~ vector(0, 0, -1))
+
+  test "the hit should offset the point":
+    var 
+      r = ray(point(0, 0, -5), vector(0, 0, 1))
+      shape = sphere()
+    shape.transform = translation(0, 0, 1)
+    let 
+      i = intersection(5, shape)
+      comps = prepare_computations(i, r)
+    check(comps.over_point.z < (-EPSILON/2.0))
+    check(comps.point.z > comps.over_point.z)
+

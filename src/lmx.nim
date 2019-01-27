@@ -19,6 +19,7 @@ type
     t*: float
     obj*: Sphere
     point*: Vec4
+    over_point*: Vec4
     eyev*: Vec4
     normalv*: Vec4
     inside*: bool
@@ -44,6 +45,8 @@ const identity*: Matrix[4] = [[1.0, 0.0, 0.0, 0.0],
                               [0.0, 0.0, 1.0, 0.0],
                               [0.0, 0.0, 0.0, 1.0]]
 
+const EPSILON* = 0.00001
+
 proc is_point*(v: Vec4): bool {.inline.} =
   v.w == 1.0
 
@@ -60,8 +63,7 @@ proc color*(r: float, g: float, b: float): Color {.inline.} =
   (r, g, b)
 
 proc `=~`*(a: float, b: float): bool {.inline.} =
-  const epsilon = 0.00001
-  abs(a - b) < epsilon
+  abs(a - b) < EPSILON
 
 proc `=~`*(a: Vec4, b: Vec4): bool {.inline.} =
   a.x =~ b.x and a.y =~ b.y and a.z =~ b.z and a.w =~ b.w
@@ -352,11 +354,12 @@ proc prepare_computations*(x: Intersection, ray: Ray): PrepComps {.inline.} =
     normalv = normal_at(obj, point)
     normalv_dot_eyev = dot(normalv, eyev)
     inside = false
+    over_point = point + normalv * EPSILON
   if normalv_dot_eyev < 0:
     inside = true
     normalv = -normalv
-  PrepComps(t: t, obj: obj, point: point, eyev: eyev, 
-            normalv: normalv, inside: inside)
+  PrepComps(t: t, obj: obj, point: point, over_point: over_point, 
+            eyev: eyev, normalv: normalv, inside: inside)
 
 proc is_shadowed*(w: World, p: Vec4, light: PointLight): bool {.inline.} =
   let
@@ -371,9 +374,10 @@ proc is_shadowed*(w: World, p: Vec4, light: PointLight): bool {.inline.} =
 proc shade_hit*(world: World, comps: PrepComps): Color {.inline.} =
   result = BLACK
   for light in world.lights:
-    let shadowed = is_shadowed(world, comps.point, light)
+    let shadowed = is_shadowed(world, comps.over_point, light)
     result = result + lighting(comps.obj.material, light, 
-                               comps.point, comps.eyev, comps.normalv, shadowed)
+                               comps.over_point, comps.eyev, comps.normalv, 
+                               shadowed)
 
 proc color_at*(world: World, ray: Ray): Color {.inline.} =
   let 

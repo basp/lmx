@@ -1,5 +1,3 @@
-# Contains all of the lmx core libary.
-
 import os, math, sequtils, options, algorithm, times
 
 type
@@ -8,16 +6,25 @@ type
   Matrix*[N: static int] = array[0..pred(N), array[0..pred(N), float]]
   Ray* = tuple[origin: Vec4, direction: Vec4]
   PointLight = tuple[intensity: Color, position: Vec4]
+  Pattern* = ref object of RootObj
+    a*: Color
+    b*: Color
+    transform*: Matrix[4]
+  Stripes = ref object of Pattern
+  Gradient = ref object of Pattern
   Material = tuple[color: Color, ambient: float, diffuse: float, 
-                   specular: float, shininess: float]
-  Sphere = ref object
+                   specular: float, shininess: float, pattern: Option[Pattern]]
+  Shape* = ref object of RootObj
     transform*: Matrix[4]
     material*: Material
-  Intersection = tuple[t: float, obj: Sphere]
-  World = tuple[objects: seq[Sphere], lights: seq[PointLight]]
+    saved_ray*: Ray
+  Sphere = ref object of Shape
+  Plane = ref object of Shape
+  Intersection = tuple[t: float, obj: Shape]
+  World = tuple[objects: seq[Shape], lights: seq[PointLight]]
   PrepComps = object
     t*: float
-    obj*: Sphere
+    obj*: Shape
     point*: Vec4
     over_point*: Vec4
     eyev*: Vec4
@@ -251,7 +258,7 @@ proc ray*(origin: Vec4, direction: Vec4): Ray {.inline.} =
 proc position*(ray: Ray, t: float): Vec4 {.inline.} =
   ray.origin + ray.direction * t
 
-proc intersection*(t: float, obj: Sphere): Intersection {.inline.} =
+proc intersection*(t: float, obj: Shape): Intersection {.inline.} =
   (t, obj)
 
 proc intersections*(xs: varargs[Intersection]): seq[Intersection] {.inline.} =
@@ -267,27 +274,46 @@ proc hit*(xs: seq[Intersection]): Option[Intersection] {.inline.} =
 proc transform*(ray: Ray, t: Matrix[4]): Ray {.inline.} =
   (t * ray.origin, t * ray.direction)
 
-proc intersect*(obj: Sphere, ray: Ray): seq[Intersection] {.inline.} =
-  var tr = transform(ray, inverse(obj.transform))
-  let
-    # the vector from the sphere's center to the ray's origin
-    # note that sphere is assumed to be at origin
+method local_intersect*(obj: Shape, tr: Ray): seq[Intersection] {.base.} =
+  @[]
+
+method local_intersect*(obj: Sphere, tr: Ray): seq[Intersection] =
+  let 
     sphere_to_ray = tr.origin - point(0, 0, 0)
     a = dot(tr.direction, tr.direction)
     b = 2 * dot(tr.direction, sphere_to_ray)
     c = dot(sphere_to_ray, sphere_to_ray) - 1.0
-    discriminant = b * b - 4 * a * c
+    discriminant = b * b - 4 * a * c  
   if discriminant < 0: return @[]
-  let
+  let 
     t1 = (-b - sqrt(discriminant)) / (2 * a)
     t2 = (-b + sqrt(discriminant)) / (2 * a)
-  @[(t1, obj), (t2, obj)]
+  @[(t1, Shape(obj)), (t2, Shape(obj))]
 
-proc normalAt*(obj: Sphere, world_point: Vec4): Vec4 {.inline.} =
+method local_intersect*(obj: Plane, tr: Ray): seq[Intersection] =
+  if abs(tr.direction.y) < EPSILON: return @[]
+  let t = -tr.origin.y / tr.direction.y
+  @[intersection(t, Shape(obj))]
+
+proc intersect*(obj: Shape, ray: Ray): seq[Intersection] {.inline.} =
+  let tr = transform(ray, inverse(obj.transform))
+  obj.saved_ray = tr
+  return local_intersect(obj, tr)
+
+method local_normal_at*(obj: Shape, local_point: Vec4): Vec4 {.base.} =
+  quit "TILT"
+
+method local_normal_at*(obj: Sphere, local_point: Vec4): Vec4 =
+  local_point - point(0, 0, 0)
+
+method local_normal_at*(obj: Plane, local_point: Vec4): Vec4 =
+  vector(0, 1, 0)
+
+proc normal_at*(obj: Shape, world_point: Vec4): Vec4 {.inline.} =
   let
-    obj_point = inverse(obj.transform) * world_point
-    obj_normal = objPoint - point(0, 0, 0)
-  var world_normal = inverse(obj.transform).transpose() * obj_normal
+    local_point = inverse(obj.transform) * world_point
+    local_normal = local_normal_at(obj, local_point)
+  var world_normal = inverse(obj.transform).transpose() * local_normal
   world_normal.w = 0.0
   normalize(world_normal)
 
@@ -298,15 +324,61 @@ proc point_light*(position: Vec4, intensity: Color): PointLight {.inline.} =
   (intensity, position)
 
 proc material*(): Material {.inline.} =
-  (color(1, 1, 1), 0.1, 0.9, 0.9, 200.0)
+  (color(1, 1, 1), 0.1, 0.9, 0.9, 200.0, none(Pattern))
+
+proc init_pattern*(pat: Pattern) {.inline.} =
+  pat.transform = identity
+
+proc init_shape*(shape: Shape) {.inline.} =
+  shape.material = material()
+  shape.transform = identity
 
 proc sphere*(): Sphere {.inline.} = 
-  Sphere(transform: identity, material: material())
+  result = Sphere()
+  init_shape(result)
 
-proc lighting*(material: Material, light: PointLight, point: Vec4, 
-               eyev: Vec4, normalv: Vec4, in_shadow = false): Color {.inline.} =
+proc plane*(): Plane {.inline.} =
+  result = Plane()
+  init_shape(result)
+
+proc stripe_at*(pat: Stripes, p: Vec4): Color {.inline.} =
+  if floor(p.x) mod 2 == 0: 
+    return pat.a
+  else:
+    return pat.b
+
+proc stripe_pattern*(a: Color, b: Color): Stripes {.inline.} =
+  Stripes(a: a, b: b, transform: identity)
+
+proc gradient_pattern*(a: Color, b: Color): Gradient {.inline.} =
+  Gradient(a: a, b: b, transform: identity)
+
+method pattern_at*(pat: Pattern,  p: Vec4): Color {.base.} =
+  return
+
+method pattern_at*(pat: Stripes, p: Vec4): Color {.inline.} =
+  stripe_at(pat, p)
+
+method pattern_at*(pat: Gradient, p: Vec4): Color =
   let
-    effective_color = material.color * light.intensity
+    distance = pat.b - pat.a
+    fraction = p.x - floor(p.x)
+  pat.a + distance * fraction
+
+proc pattern_at_shape*(pat: Pattern, obj: Shape, world_point: Vec4): Color {.inline.} =
+  let
+    obj_point = inverse(obj.transform) * world_point
+    pat_point = inverse(pat.transform) * obj_point
+  pattern_at(pat, pat_point)
+
+proc lighting*(material: Material, obj: Shape, light: PointLight, point: Vec4, 
+               eyev: Vec4, normalv: Vec4, in_shadow = false): Color {.inline.} =
+  let color = if material.pattern.is_some():
+    pattern_at_shape(material.pattern.get(), obj, point)
+  else:
+    material.color
+  let
+    effective_color = color * light.intensity
     lightv = normalize(light.position - point)
     ambient = effective_color * material.ambient
     light_dot_normal = dot(lightv, normalv)
@@ -328,8 +400,8 @@ proc world*(): World {.inline.} =
 
 proc default_world*(): World {.inline.} =
   var  
-    s1 = sphere()
-    s2 = sphere()
+    s1: Shape = sphere()
+    s2: Shape = sphere()
   let light = point_light(point(-10, 10, -10), color(1, 1, 1))
   s1.material.color = color(0.8, 1.0, 0.6)
   s1.material.diffuse = 0.7
@@ -375,7 +447,7 @@ proc shade_hit*(world: World, comps: PrepComps): Color {.inline.} =
   result = BLACK
   for light in world.lights:
     let shadowed = is_shadowed(world, comps.over_point, light)
-    result = result + lighting(comps.obj.material, light, 
+    result = result + lighting(comps.obj.material, comps.obj, light, 
                                comps.over_point, comps.eyev, comps.normalv, 
                                shadowed)
 
@@ -443,7 +515,8 @@ proc render*(camera: Camera, world: World): Canvas =
     let 
       finish = now()
       dur = finish - start
-    echo "row ", succ(y), " of ", camera.vsize, " (", dur.milliseconds(), " ms)"
+    if isMainModule:
+      echo "row ", succ(y), "/", camera.vsize, " (", dur.milliseconds(), " ms)"
 
 proc pixel_at*(canvas: Canvas, x: int, y: int): Color {.inline.} =
   canvas.pixels[y * canvas.hsize + x]
@@ -455,7 +528,7 @@ when is_main_module:
     value
 
   proc getRGB(c: Color): tuple[r: int, g: int, b: int] =
-    # make sure we don't overflow colors (i.e. r, g, b > 255)
+    # make sure we don't overflow colors (i.e. keep r, g, b <= 255)
     let
         r = int(255.99 * c.r).clamp(0, 255)
         g = int(255.99 * c.g).clamp(0, 255)
@@ -464,34 +537,41 @@ when is_main_module:
 
   var w = world()
 
-  let floor = sphere()
-  floor.transform = scaling(10, 0.01, 10)
+  var red_grey_stripes = stripe_pattern(color(1.0, 0.2, 0.2), color(0.5, 0.5, 0.5))
+  
+  var blue_grey_stripes = stripe_pattern(color(0.1, 0.3, 0.95), color(0.5, 0.5, 0.5))
+  blue_grey_stripes.transform = scaling(0.5, 0, 0) * rotation_x(PI / 4)
+  
+  var pink_blue_stripes = stripe_pattern(color(0.9, 0.05, 0.6), color(0.2, 0.2, 1.0))
+  pink_blue_stripes.transform = scaling(0.25, 0.25, 0.25)
+
+  var g1 = gradient_pattern(color(0, 0.2, 0.3), color(1, 1, 1))
+  # make sure to transform it so the gradient won't overflow
+  g1.transform = translation(-1, 0, 0) * scaling(2, 2, 2)
+
+  let floor: Shape = plane()
   floor.material = material()
   floor.material.color = color(1, 0.9, 0.9)
   floor.material.specular = 0
+  floor.material.pattern = some(Pattern(red_grey_stripes))
 
-  let left_wall = sphere()
-  left_wall.transform = translation(0, 0, 5) *
-                        rotation_y(-PI / 4) *
-                        rotation_x(PI / 2) *
-                        scaling(10, 0.01, 10)
-  left_wall.material = floor.material
+  let backdrop: Shape = plane()
+  backdrop.material = material()
+  backdrop.material.color = color(0.2, 0.3, 1.0)
+  backdrop.material.specular = 0
+  backdrop.material.pattern = some(Pattern(red_grey_stripes))
+  backdrop.transform = translation(0, 0, 2) * 
+                       rotation_x(-PI / 2)
 
-  let right_wall = sphere()
-  right_wall.transform = translation(0, 0, 5) *
-                         rotation_y(PI / 4) *
-                         rotation_x(PI / 2) *
-                         scaling(10, 0.01, 10)
-  right_wall.material = floor.material
-
-  let middle = sphere()
-  middle.transform = translation(-0.5, 1, 0.5)
+  let middle: Shape = sphere()
+  middle.transform = translation(-0.5, 0.5, 0.5) * rotation_z(PI / 5)
   middle.material = material()
   middle.material.color = color(0.1, 1, 0.5)
   middle.material.diffuse = 0.7
   middle.material.specular = 0.3
+  middle.material.pattern = some(Pattern(pink_blue_stripes))
 
-  let right = sphere()
+  let right: Shape = sphere()
   right.transform = translation(1.5, 0.5, -0.5) *
                     scaling(0.5, 0.5, 0.5)
   right.material = material()
@@ -499,19 +579,20 @@ when is_main_module:
   right.material.diffuse = 0.7
   right.material.specular = 0.3
 
-  let left = sphere()
+  let left: Shape = sphere()
   left.transform = translation(-1.5, 0.33, -0.75) *
                    scaling(0.33, 0.33, 0.33)
   left.material = material()
+  left.material.pattern = some(Pattern(g1))
   left.material.color = color(1, 0.8, 0.1)
   left.material.diffuse = 0.7
   left.material.specular = 0.3
 
   let light = point_light(point(-10, 10, -10), color(1, 1, 1))
   w.lights = @[light]
-  w.objects = @[floor, left_wall, right_wall, middle, right, left]
+  w.objects = @[floor, backdrop, middle, right, left]
 
-  let c = camera(400, 200, PI / 3)
+  let c = camera(1280, 1024, PI / 3)
   c.transform = view_transform(point(0, 1.5, -5),
                                point(0, 1, 0),
                                vector(0, 1, 0))

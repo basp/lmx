@@ -53,16 +53,6 @@ suite "spheres":
     check(xs[0].obj == s)
     check(xs[1].obj == s)
 
-  test "a sphere's default transformation":
-    let s = sphere()
-    check(s.transform =~ identity)
-
-  test "changing the sphere's transformation":
-    let t = translation(2, 3, 4)
-    var s = sphere()
-    s.transform = t
-    check(s.transform == t)
-
   test "intersecting a scaled sphere with a ray":
     var s = sphere()
     s.transform = scaling(2, 2, 2)
@@ -110,29 +100,3 @@ suite "spheres":
       s = sphere()
       n = normal_at(s, point(sqrt(3.0) / 3, sqrt(3.0) / 3, sqrt(3.0) / 3))
     check(n =~ normalize(n))
-
-  test "computing the normal on a translated sphere":
-    var s = sphere()
-    s.transform = translation(0, 1, 0)
-    let n = normal_at(s, point(0, 1.70711, -0.70711))
-    check(n =~ vector(0, 0.70711, -0.70711))
-  
-  test "computing the nomral on a transformed sphere":
-    var s = sphere()
-    s.transform = scaling(1, 0.5, 1) * rotationZ(PI/5)
-    let n = normal_at(s, point(0, sqrt(2.0) / 2, -sqrt(2.0) / 2))
-    check(n =~ vector(0, 0.97014, -0.24254))
-
-  test "a sphere has a default material":
-    let 
-      s = sphere()
-      m = s.material
-    check(m == material())
-    
-  test "a sphere may be assigned a material":
-    var 
-      s = sphere()
-      m = material()
-    m.ambient = 1
-    s.material = m
-    check(s.material == m)

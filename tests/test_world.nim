@@ -109,8 +109,8 @@ suite "world":
   test "shade_hit() is given an intersection in shadow":
     var
       w = world()
-      s1 = sphere()
-      s2 = sphere()
+      s1: Shape = sphere()
+      s2: Shape = sphere()
       r = ray(point(0, 0, 5), vector(0, 0, 1))
       i = intersection(4, s2)
       comps = prepare_computations(i, r)

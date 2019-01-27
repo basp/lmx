@@ -302,7 +302,7 @@ proc sphere*(): Sphere {.inline.} =
   Sphere(transform: identity, material: material())
 
 proc lighting*(material: Material, light: PointLight, point: Vec4, 
-               eyev: Vec4, normalv: Vec4): Color {.inline.} =
+               eyev: Vec4, normalv: Vec4, in_shadow = false): Color {.inline.} =
   let
     effective_color = material.color * light.intensity
     lightv = normalize(light.position - point)
@@ -310,6 +310,7 @@ proc lighting*(material: Material, light: PointLight, point: Vec4,
     light_dot_normal = dot(lightv, normalv)
   var
     diffuse, specular: Color
+  if in_shadow: return ambient
   if light_dot_normal >= 0:
     diffuse = effective_color * material.diffuse * light_dot_normal
     let 
@@ -357,10 +358,22 @@ proc prepare_computations*(x: Intersection, ray: Ray): PrepComps {.inline.} =
   PrepComps(t: t, obj: obj, point: point, eyev: eyev, 
             normalv: normalv, inside: inside)
 
+proc is_shadowed*(w: World, p: Vec4, light: PointLight): bool {.inline.} =
+  let
+    v = light.position - p
+    distance = magnitude(v)
+    direction = normalize(v)
+    r = ray(p, direction)
+    xs = intersect_world(w, r)
+    h = hit(xs)
+  h.is_some() and h.get().t < distance
+            
 proc shade_hit*(world: World, comps: PrepComps): Color {.inline.} =
   result = BLACK
   for light in world.lights:
-    result = result + lighting(comps.obj.material, light, comps.point, comps.eyev, comps.normalv)
+    let shadowed = is_shadowed(world, comps.point, light)
+    result = result + lighting(comps.obj.material, light, 
+                               comps.point, comps.eyev, comps.normalv, shadowed)
 
 proc color_at*(world: World, ray: Ray): Color {.inline.} =
   let 
@@ -494,7 +507,7 @@ when is_main_module:
   w.lights = @[light]
   w.objects = @[floor, left_wall, right_wall, middle, right, left]
 
-  let c = camera(3840, 2160, PI / 3)
+  let c = camera(400, 200, PI / 3)
   c.transform = view_transform(point(0, 1.5, -5),
                                point(0, 1, 0),
                                vector(0, 1, 0))

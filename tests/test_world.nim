@@ -79,3 +79,40 @@ suite "world":
     inner.material.ambient = 1
     let c = color_at(w, r)
     check(c == inner.material.color)
+
+  test "there is no shadow when nothing is collinear with point and light":
+    let 
+      w = default_world()  
+      p = point(0, 10, 0)
+    check(not is_shadowed(w, p))
+
+  test "the shadow when an object is between the point and light":
+    let
+      w = default_world()
+      p = point(10, -10, 10)
+    check(is_shadowed(w, p))
+
+  test "there is no shadow when an object is behind the light":
+    let
+      w = default_world()
+      p = point(-20, 20, -10)
+    check(not is_shadowed(w, p))
+
+  test "there is no shadow when an object is behind the point":
+    let
+      w = default_world()
+      p = point(-2, 2, 2)
+    check(not is_shadowed(w, p))
+
+  test "shade_hit() is given an intersection in shadow":
+    var
+      w = world()
+      s1 = sphere()
+      s2 = sphere()
+      r = ray(point(0, 0, 5), vector(0, 0, 1))
+      i = intersection(4, s2)
+      comps = prepare_computations(i, r)
+    w.lights = @[point_light(point(0, 0, -10), color(1, 1, 1))]
+    w.objects = @[s1, s2]
+    let c = shade_hit(w, comps)
+    check(c == color(0.1, 0.1, 0.1))

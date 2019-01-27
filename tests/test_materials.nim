@@ -53,3 +53,11 @@ suite "materials":
       result = lighting(m, light, position, eyev, normalv)
     check(result =~ color(0.1, 0.1, 0.1))
     
+  test "lighting with the surface in shadow":
+    let
+      eyev = vector(0, 0, -1)
+      normalv = vector(0, 0, 1)
+      light = point_light(point(0, 0, -10), color(1, 1, 1))
+      in_shadow = true
+      result = lighting(m, light, position, eyev, normalv, in_shadow)
+    check(result =~ color(0.1, 0.1, 0.1))

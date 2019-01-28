@@ -143,7 +143,7 @@ proc prepare_computations*(x: Intersection, ray: Ray): PrepComps {.inline.} =
     normalv = normal_at(obj, point)
     normalv_dot_eyev = dot(normalv, eyev)
     inside = false
-    over_point = point + normalv * EPSILON
+    over_point = point + normalv * epsilon
   if normalv_dot_eyev < 0:
     inside = true
     normalv = -normalv

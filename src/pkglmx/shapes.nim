@@ -26,7 +26,7 @@ method local_intersect*(obj: Sphere, tr: Ray): seq[Intersection] =
   @[(t1, Shape(obj)), (t2, Shape(obj))]
   
 method local_intersect*(obj: Plane, tr: Ray): seq[Intersection] =
-  if abs(tr.direction.y) < EPSILON: return @[]
+  if abs(tr.direction.y) < epsilon: return @[]
   let t = -tr.origin.y / tr.direction.y
   @[intersection(t, Shape(obj))] 
 

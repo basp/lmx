@@ -11,7 +11,7 @@ const identity*: Matrix[4] =
   [0.0, 0.0, 1.0, 0.0],
   [0.0, 0.0, 0.0, 1.0]]
 
-const EPSILON* = 0.00001
+const epsilon* = 0.00001
  
 const 
   BLACK*: Color = (0.0, 0.0, 0.0)
@@ -33,7 +33,7 @@ proc color*(r: float, g: float, b: float): Color {.inline.} =
   (r, g, b)
 
 proc `=~`*(a: float, b: float): bool {.inline.} =
-  abs(a - b) < EPSILON
+  abs(a - b) < epsilon
   
 proc `=~`*(a: Vec4, b: Vec4): bool {.inline.} =
   a.x =~ b.x and a.y =~ b.y and a.z =~ b.z and a.w =~ b.w

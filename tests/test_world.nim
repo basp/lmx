@@ -1,4 +1,4 @@
-import unittest, sequtils, options, lmx
+import unittest, sequtils, options, pkglmx/core
 
 suite "world":
   test "creating a world":

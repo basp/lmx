@@ -1,4 +1,4 @@
-import unittest, lmx
+import unittest, pkglmx/core
 
 suite "lights":
     test "a point light has a position and intensity":

@@ -1,4 +1,4 @@
-import unittest, math, lmx
+import unittest, math, pkglmx/core
 
 suite "rays":
   test "creating and querying a ray":

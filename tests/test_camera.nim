@@ -1,4 +1,4 @@
-import unittest, math, lmx
+import unittest, math, pkglmx/core
 
 suite "camera":
   test "constructing a camera":

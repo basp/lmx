@@ -1,4 +1,4 @@
-import unittest, math, lmx
+import unittest, math, pkglmx/core
 
 suite "planes":
   test "the normal of a plane is constant everywhere":

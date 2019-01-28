@@ -1,4 +1,4 @@
-import unittest, math, lmx
+import unittest, math, pkglmx/core
 
 suite "spheres":
   test "a ray intersects a sphere at two points":

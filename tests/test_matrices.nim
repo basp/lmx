@@ -1,4 +1,4 @@
-import unittest, math, lmx
+import unittest, math, pkglmx/core
 
 suite "matrices":
     test "constructing and inspecting a 4x4 matrix":

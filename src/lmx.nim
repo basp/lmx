@@ -74,7 +74,7 @@ when is_main_module:
   w.lights = @[light]
   w.objects = @[floor, backdrop, middle, right, left]
 
-  let c = camera(1280, 1024, PI / 3)
+  let c = camera(400, 200, PI / 3)
   c.transform = view_transform(point(1.1, 1.4, -4),
                                point(0, 0.5, 0),
                                vector(0, 1, 0))

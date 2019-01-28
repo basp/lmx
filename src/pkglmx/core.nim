@@ -2,29 +2,48 @@ import math, sequtils, options, algorithm, times
 {.experimental: "parallel".}
 
 type
+  # linalg/core
   Vec4* = tuple[x: float, y: float, z: float, w: float]
-  Color* = tuple[r: float, g: float, b: float]
   Matrix*[N: static int] = array[0..pred(N), array[0..pred(N), float]]
+  
+  # model/world/rendering/core
   Ray* = tuple[origin: Vec4, direction: Vec4]
+  Color* = tuple[r: float, g: float, b: float]
+
+  # model/world/rendering
   PointLight = tuple[intensity: Color, position: Vec4]
+
+  # model/world/rendering
   Pattern* = ref object of RootObj
     a*: Color
     b*: Color
     transform*: Matrix[4]
+
+  # patterns
   Stripes = ref object of Pattern
   Rings = ref object of Pattern
   Checkers = ref object of Pattern
   Gradient = ref object of Pattern
+
+  # model/world
   Material = tuple[color: Color, ambient: float, diffuse: float, 
                    specular: float, shininess: float, pattern: Option[Pattern]]
+
+  # core
   Shape* = ref object of RootObj
     transform*: Matrix[4]
     material*: Material
     saved_ray*: Ray
+
+  # shapes
   Sphere = ref object of Shape
   Plane = ref object of Shape
+  
+  # model/world/rendering
   Intersection = tuple[t: float, obj: Shape]
   World = tuple[objects: seq[Shape], lights: seq[PointLight]]
+
+  # core?  
   PrepComps = object
     t*: float
     obj*: Shape
@@ -33,6 +52,8 @@ type
     eyev*: Vec4
     normalv*: Vec4
     inside*: bool
+
+  # model/world/rendering
   Camera = ref object
     hsize*: int
     vsize*: int
@@ -41,6 +62,8 @@ type
     pixel_size*: float
     half_width: float
     half_height: float
+
+  # rendering
   Canvas = ref object
     hsize*: int
     vsize*: int
@@ -143,27 +166,27 @@ proc col*[N](m: Matrix[N], col: int): Vec4 {.inline.} =
 
 proc `=~`*[N](a, b: Matrix[N]): bool {.inline.} =
   result = true
-  for r in 0..N-1:
-    for c in 0..N-1:
+  for r in 0..pred(N):
+    for c in 0..pred(N):
       if not (a[r][c] =~ b[r][c]):
         result = false
 
 proc `*`*[N](a, b: Matrix[N]): Matrix[N] {.inline.} =
-  for r in 0..N-1:
-    for c in 0..N-1:
+  for r in 0..pred(N):
+    for c in 0..pred(N):
       result[r][c] = dot(row(a, r), col(b, c))
 
 proc `*`*(a: Matrix[4], b: Vec4): Vec4 {.inline.} =
   (dot(row(a, 0), b), dot(row(a, 1), b), dot(row(a, 2), b), dot(row(a, 3), b))
 
 proc transpose*[N](a: Matrix[N]): Matrix[N] {.inline.} =
-  for r in 0..N-1:
-    for c in 0..N-1:
+  for r in 0..pred(N):
+    for c in 0..pred(N):
       result[c][r] = a[r][c]
 
 proc submatrix[N, M](a: Matrix[N], row: int, col: int): Matrix[M] {.inline.} =
   let 
-    idxs = toSeq 0..N-1
+    idxs = toSeq 0..pred(N)
     rows = filter(idxs) do (i: int) -> bool : i != row
     cols = filter(idxs) do (i: int) -> bool : i != col
   for r in 0..high(rows):
@@ -527,7 +550,7 @@ proc write_pixel(canvas: Canvas, x: int, y: int, color: Color) {.inline.} =
   let i = y * canvas.hsize + x
   canvas.pixels[i] = color
 
-proc render*(camera: Camera, world: World): Canvas =
+proc render*(camera: Camera, world: World, show_progress = false): Canvas =
   result = canvas(camera.hsize, camera.vsize)
   for y in 0..pred(camera.vsize):
     let start = now()
@@ -539,7 +562,7 @@ proc render*(camera: Camera, world: World): Canvas =
     let 
       finish = now()
       dur = finish - start
-    if isMainModule:
+    if show_progress:
       echo succ(y), "/", camera.vsize, " (", dur, ")"
 
 proc pixel_at*(canvas: Canvas, x: int, y: int): Color {.inline.} =

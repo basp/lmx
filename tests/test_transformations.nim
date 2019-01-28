@@ -1,4 +1,4 @@
-import unittest, math, pkglmx/core
+import unittest, math, lmx
 
 suite "transformations":
   test "multiplying by a translation matrix":

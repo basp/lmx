@@ -1,4 +1,13 @@
-import math, options, times, pkglmx/core
+import math, options, times
+
+import pkglmx/core, 
+       pkglmx/linalg, 
+       pkglmx/patterns,
+       pkglmx/shapes, 
+       pkglmx/canvas, 
+       pkglmx/utils
+
+export core, linalg, patterns, shapes, canvas, utils
 
 when is_main_module:
   proc clamp(value: int, min: int, max: int): int {.inline.} =

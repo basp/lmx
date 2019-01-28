@@ -1,4 +1,4 @@
-import unittest, math, pkglmx/core
+import unittest, math, lmx
 
 type TestPattern = ref object of Pattern
 

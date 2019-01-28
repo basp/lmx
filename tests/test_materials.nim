@@ -1,4 +1,4 @@
-import unittest, math, options, pkglmx/core
+import unittest, math, options, lmx
 
 suite "materials":
   setup:

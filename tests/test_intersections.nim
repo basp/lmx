@@ -1,4 +1,4 @@
-import unittest, math, options, pkglmx/core
+import unittest, math, options, lmx
 
 suite "intersections":
   test "an intersection encapsulates t and object":

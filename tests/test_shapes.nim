@@ -1,4 +1,4 @@
-import unittest, math, options, pkglmx/core
+import unittest, math, options, lmx
 
 type
   TestShape = ref object of Shape

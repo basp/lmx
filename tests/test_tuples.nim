@@ -1,4 +1,4 @@
-import unittest, math, pkglmx/core
+import unittest, math, lmx
 
 suite "tuples":
     test "a tuple with w = 1.0 is a point":

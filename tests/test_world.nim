@@ -1,4 +1,4 @@
-import unittest, sequtils, options, lmx
+import unittest, math, sequtils, options, lmx
 
 suite "world":
   test "creating a world":
@@ -118,3 +118,29 @@ suite "world":
     w.objects = @[s1, s2]
     let c = shade_hit(w, comps)
     check(c == color(0.1, 0.1, 0.1))
+
+  test "the reflected color for a non-reflective material":
+    let
+      w = default_world()
+      r = ray(point(0, 0, 0), vector(0, 0, 1))
+    var shape = w.objects[1]
+    shape.material.ambient = 1
+    let 
+      i = intersection(1, shape)
+      comps = prepare_computations(i, r)
+      c = reflected_color(w, comps)
+    check(c =~ color(0, 0, 0))
+
+  test "the reflected color for a reflective material":
+    var
+      w = default_world()
+      shape = plane()
+    shape.material.reflective = 0.5
+    shape.transform = translation(0, -1, 0)
+    w.objects = @[Shape(shape)]
+    let
+      r = ray(point(0, 0, -3), vector(0, -sqrt(2.0)/2, sqrt(2.0)/2))
+      i = intersection(sqrt(2.0), shape)
+      comps = prepare_computations(i, r)
+      c = reflected_color(w, comps)
+    check(c =~ color(0.19032, 0.2379, 0.14274))

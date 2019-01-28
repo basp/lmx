@@ -18,9 +18,9 @@ when is_main_module:
   proc getRGB(c: Color): tuple[r: int, g: int, b: int] =
     # make sure we don't overflow colors (i.e. keep r, g, b <= 255)
     let
-        r = int(255.99 * c.r).clamp(0, 255)
-        g = int(255.99 * c.g).clamp(0, 255)
-        b = int(255.99 * c.b).clamp(0, 255)
+      r = int(255.99 * c.r).clamp(0, 255)
+      g = int(255.99 * c.g).clamp(0, 255)
+      b = int(255.99 * c.b).clamp(0, 255)
     (r, g, b)
 
   var w = world()
@@ -33,7 +33,7 @@ when is_main_module:
   var pink_blue_stripes = stripe_pattern(color(0.9, 0.05, 0.6), color(0.2, 0.2, 1.0))
   pink_blue_stripes.transform = scaling(0.25, 0.25, 0.25)
 
-  var g1 = gradient_pattern(color(0, 0.2, 0.3), color(1, 1, 1))
+  var g1 = gradient_pattern(color(0.0, 0.0, 1.0), color(0.0, 1, 0))
   # make sure to transform it so the gradient won't overflow
   g1.transform = translation(-1, 0, 0) * scaling(2, 2, 2)
 
@@ -80,16 +80,19 @@ when is_main_module:
   left.material.specular = 0.3
 
   let light = point_light(point(-10, 10, -10), color(1, 1, 1))
-  w.lights = @[light]
+  let l2 = point_light(point(10, 10, -10), color(0.2, 0.15, 0.7))
+  let l3 = point_light(point(2, 5, -10), color(0.3, 0.7, 0.2))
+
+  w.lights = @[light, l2, l3]
   w.objects = @[floor, backdrop, middle, right, left]
 
-  let c = camera(400, 200, PI / 3)
-  c.transform = view_transform(point(1.1, 1.4, -4),
+  let c = camera(1960, 1080, PI / 3)
+  c.transform = view_transform(point(2.1, 2.5, -4),
                                point(0, 0.5, 0),
                                vector(0, 1, 0))
   
   let start = now()
-  let img = render(c, w)
+  let img = render(c, w, true)
   let f = open("out.ppm", fmWrite)
   write_line(f, "P3")
   write_line(f, img.hsize, " ", img.vsize)

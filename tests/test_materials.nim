@@ -77,3 +77,7 @@ suite "materials":
       c2 = lighting(m, s, light, point(1.1, 0, 0), eyev, normalv, false)
     check(c1 =~ color(1, 1, 1))
     check(c2 =~ color(0, 0, 0))
+
+  test "reflectivity for the default matrerial":
+    check(m.reflective =~ 0)
+    

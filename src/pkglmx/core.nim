@@ -9,7 +9,8 @@ type
     b*: Color
     transform*: Matrix[4]
   Material = tuple[color: Color, ambient: float, diffuse: float, 
-                   specular: float, shininess: float, pattern: Option[Pattern]]
+                   specular: float, shininess: float, 
+                   reflective: float, pattern: Option[Pattern]]
   Shape* = ref object of RootObj
     transform*: Matrix[4]
     material*: Material
@@ -23,6 +24,7 @@ type
     over_point*: Vec4
     eyev*: Vec4
     normalv*: Vec4
+    reflectv*: Vec4
     inside*: bool
   Camera* = ref object
     hsize*: int
@@ -81,7 +83,7 @@ proc point_light*(position: Vec4, intensity: Color): PointLight {.inline.} =
   (intensity, position)
 
 proc material*(): Material {.inline.} =
-  (color(1, 1, 1), 0.1, 0.9, 0.9, 200.0, none(Pattern))
+  (color(1, 1, 1), 0.1, 0.9, 0.9, 200.0, 0.0, none(Pattern))
 
 proc init_pattern*(pat: Pattern) {.inline.} =
   pat.transform = identity
@@ -98,6 +100,9 @@ proc pattern_at_shape*(pat: Pattern, obj: Shape, world_point: Vec4): Color {.inl
     obj_point = inverse(obj.transform) * world_point
     pat_point = inverse(pat.transform) * obj_point
   pattern_at(pat, pat_point)
+
+proc reflected_color*(w: World, comps: PrepComps): Color {.inline.} =
+  result = BLACK
 
 proc lighting*(material: Material, obj: Shape, light: PointLight, point: Vec4, 
                eyev: Vec4, normalv: Vec4, in_shadow = false): Color {.inline.} =
@@ -141,6 +146,7 @@ proc prepare_computations*(x: Intersection, ray: Ray): PrepComps {.inline.} =
     point = position(ray, t)
     eyev = -ray.direction
     normalv = normal_at(obj, point)
+    reflectv = reflect(ray.direction, normalv)
     normalv_dot_eyev = dot(normalv, eyev)
     inside = false
     over_point = point + normalv * epsilon

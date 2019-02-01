@@ -25,7 +25,8 @@ when is_main_module:
 
   var w = world()
 
-  var red_grey_stripes = stripe_pattern(color(1.0, 0.2, 0.2), color(0.5, 0.5, 0.5))
+  var red_grey_stripes = stripe_pattern(color(0.4, 0.3, 0.3), color(0.1, 0.1, 0.1))
+  var grey_black_stripes = stripe_pattern(color(0.2, 0.2, 0.2), color(0.0, 0.0, 0.0))
   
   var blue_grey_stripes = stripe_pattern(color(0.1, 0.3, 0.95), color(0.5, 0.5, 0.5))
   blue_grey_stripes.transform = scaling(0.5, 0, 0) * rotation_x(PI / 4)
@@ -43,13 +44,13 @@ when is_main_module:
   let floor: Shape = plane()
   floor.material = material()
   floor.material.color = color(1, 0.9, 0.9)
-  floor.material.reflective = 0.68
+  #floor.material.reflective = 0.1
   floor.material.specular = 0
   floor.material.pattern = some(Pattern(checkers))
 
   let backdrop: Shape = plane()
   backdrop.material = material()
-  backdrop.material.reflective = 0.3
+  backdrop.material.reflective = 1.0
   backdrop.material.color = color(0.2, 0.3, 1.0)
   backdrop.material.specular = 0
   backdrop.material.pattern = some(Pattern(red_grey_stripes))
@@ -65,8 +66,9 @@ when is_main_module:
   middle.material.pattern = some(Pattern(pink_blue_stripes))
 
   let right: Shape = sphere()
-  right.transform = translation(1.5, 0.5, -0.5) *
+  right.transform = translation(1.52, 0.54, -0.5) *
                     scaling(0.5, 0.5, 0.5)
+  right.material.reflective = 0.32
   right.material = material()
   right.material.color = color(0.5, 1, 0.1)
   right.material.diffuse = 0.7
@@ -76,7 +78,7 @@ when is_main_module:
   left.transform = translation(-1.5, 0.33, -0.75) *
                    scaling(0.33, 0.33, 0.33)
   left.material = material()
-  left.material.reflective = 0.43
+  #left.material.reflective = 0.43
   left.material.pattern = some(Pattern(g1))
   left.material.color = color(1, 0.8, 0.1)
   left.material.diffuse = 0.7
@@ -91,7 +93,7 @@ when is_main_module:
   w.objects = @[floor, backdrop, middle, right, left]
 
   let c = camera(800, 600, PI / 3)
-  c.transform = view_transform(point(2.1, 2.5, -4),
+  c.transform = view_transform(point(-2.45, 3.63, -5.2),
                                point(0, 0.5, 0),
                                vector(0, 1, 0))
   

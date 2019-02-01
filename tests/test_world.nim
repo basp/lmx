@@ -159,3 +159,20 @@ suite "world":
       c = shade_hit(w, comps)
     check(c =~ color(0.87677, 0.92436, 0.82918))
 
+  test "color_at() with mutually reflective surfaces":
+    var
+      w = world()
+      lower = plane()
+      upper = plane()
+      r = ray(point(0, 0, 0), vector(0, 1, 0))
+    w.lights = @[point_light(point(0, 0, 0), color(1, 1, 1))]
+    lower.material.reflective = 1
+    lower.transform = translation(0, -1, 0)
+    upper.material.reflective = 1
+    upper.transform = translation(0, 1, 0)
+    w.objects.add(lower)
+    w.objects.add(upper)
+    let c = color_at(w, r)
+
+
+

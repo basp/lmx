@@ -137,7 +137,7 @@ suite "world":
       shape = plane()
     shape.material.reflective = 0.5
     shape.transform = translation(0, -1, 0)
-    w.objects = @[Shape(shape)]
+    w.objects.add(shape)
     let
       r = ray(point(0, 0, -3), vector(0, -sqrt(2.0)/2, sqrt(2.0)/2))
       i = intersection(sqrt(2.0), shape)

@@ -108,4 +108,4 @@ suite "intersections":
       r = ray(point(0, 1, -1), vector(0, -sqrt(2.0)/2.0, sqrt(2.0)/2.0))
       i = intersection(sqrt(2.0), shape)
       comps = prepare_computations(i, r)
-    check(comps.reflectv =~ vector(0, sqrt(2.0)/2, sqrt(2.0)/2))
+    check(comps.reflectv == vector(0, sqrt(2.0)/2, sqrt(2.0)/2))

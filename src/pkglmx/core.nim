@@ -101,9 +101,6 @@ proc pattern_at_shape*(pat: Pattern, obj: Shape, world_point: Vec4): Color {.inl
     pat_point = inverse(pat.transform) * obj_point
   pattern_at(pat, pat_point)
 
-proc reflected_color*(w: World, comps: PrepComps): Color {.inline.} =
-  result = BLACK
-
 proc lighting*(material: Material, obj: Shape, light: PointLight, point: Vec4, 
                eyev: Vec4, normalv: Vec4, in_shadow = false): Color {.inline.} =
   let color = if material.pattern.is_some():
@@ -146,15 +143,16 @@ proc prepare_computations*(x: Intersection, ray: Ray): PrepComps {.inline.} =
     point = position(ray, t)
     eyev = -ray.direction
     normalv = normal_at(obj, point)
-    reflectv = reflect(ray.direction, normalv)
     normalv_dot_eyev = dot(normalv, eyev)
     inside = false
     over_point = point + normalv * epsilon
   if normalv_dot_eyev < 0:
     inside = true
     normalv = -normalv
+  let reflectv = reflect(ray.direction, normalv)
   PrepComps(t: t, obj: obj, point: point, over_point: over_point, 
-            eyev: eyev, normalv: normalv, inside: inside)
+            eyev: eyev, normalv: normalv, reflectv: reflectv,
+            inside: inside)
 
 proc is_shadowed*(w: World, p: Vec4, light: PointLight): bool {.inline.} =
   let
@@ -165,20 +163,32 @@ proc is_shadowed*(w: World, p: Vec4, light: PointLight): bool {.inline.} =
     xs = intersect_world(w, r)
     h = hit(xs)
   h.is_some() and h.get().t < distance
-            
+
+proc color_at*(world: World, ray: Ray): Color {.inline.}
+
+proc reflected_color*(w: World, comps: PrepComps): Color {.inline.} =
+  if comps.obj.material.reflective == 0:
+    return BLACK
+  let 
+    reflect_ray = ray(comps.over_point, comps.reflectv)
+    color = color_at(w, reflect_ray)  
+  return color * comps.obj.material.reflective  
+
 proc shade_hit*(world: World, comps: PrepComps): Color {.inline.} =
   result = BLACK
   for light in world.lights:
     let shadowed = is_shadowed(world, comps.over_point, light)
     result = result + lighting(comps.obj.material, comps.obj, light, 
-                               comps.over_point, comps.eyev, comps.normalv, 
-                               shadowed)
+                         comps.over_point, comps.eyev, comps.normalv, 
+                         shadowed)
+    result = result + reflected_color(world, comps)    
 
 proc color_at*(world: World, ray: Ray): Color {.inline.} =
   let 
     xs = intersect_world(world, ray)
     maybe_hit = hit(xs)
-  if maybe_hit.is_none(): return BLACK
+  if maybe_hit.is_none(): 
+    return BLACK
   let 
     hit = maybe_hit.get()
     comps = prepare_computations(hit, ray)

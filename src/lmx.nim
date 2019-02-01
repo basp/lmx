@@ -50,12 +50,12 @@ when is_main_module:
 
   let backdrop: Shape = plane()
   backdrop.material = material()
-  backdrop.material.reflective = 0.68
+  backdrop.material.reflective = 0.93
   backdrop.material.color = color(0, 0, 0)
   backdrop.material.specular = 0
   # backdrop.material.pattern = some(Pattern(red_grey_stripes))
-  # backdrop.transform = translation(0, 0, 3.3) * 
-  #                      rotation_x(-PI / 2)
+  backdrop.transform = translation(0, 0, 3.3) * 
+                       rotation_x(-PI / 2)
 
   let middle: Shape = sphere()
   middle.transform = translation(-0.5, 1.0, 0.5) * rotation_z(PI / 5)
@@ -92,8 +92,8 @@ when is_main_module:
   w.lights = @[light]
   w.objects = @[floor, backdrop, middle, right, left]
 
-  let c = camera(400, 200, PI / 3)
-  c.transform = view_transform(point(-2.45, 3.63, -5.2),
+  let c = camera(800, 600, PI / 3)
+  c.transform = view_transform(point(-2.45, 4.63, -5.2),
                                point(0, 0.5, 0),
                                vector(0, 1, 0))
   

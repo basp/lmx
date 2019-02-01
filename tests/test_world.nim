@@ -144,3 +144,18 @@ suite "world":
       comps = prepare_computations(i, r)
       c = reflected_color(w, comps)
     check(c =~ color(0.19032, 0.2379, 0.14274))
+
+  test "shade_hit() with a reflective material":
+    var
+      w = default_world()
+      shape = plane()
+    shape.material.reflective = 0.5
+    shape.transform = translation(0, -1, 0)
+    w.objects.add(shape)
+    let
+      r = ray(point(0, 0, -3), vector(0, -sqrt(2.0)/2, sqrt(2.0)/2))
+      i = intersection(sqrt(2.0), shape)
+      comps = prepare_computations(i, r)
+      c = shade_hit(w, comps)
+    check(c =~ color(0.87677, 0.92436, 0.82918))
+

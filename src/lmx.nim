@@ -43,11 +43,13 @@ when is_main_module:
   let floor: Shape = plane()
   floor.material = material()
   floor.material.color = color(1, 0.9, 0.9)
+  floor.material.reflective = 0.68
   floor.material.specular = 0
   floor.material.pattern = some(Pattern(checkers))
 
   let backdrop: Shape = plane()
   backdrop.material = material()
+  backdrop.material.reflective = 0.3
   backdrop.material.color = color(0.2, 0.3, 1.0)
   backdrop.material.specular = 0
   backdrop.material.pattern = some(Pattern(red_grey_stripes))
@@ -55,7 +57,7 @@ when is_main_module:
                        rotation_x(-PI / 2)
 
   let middle: Shape = sphere()
-  middle.transform = translation(-0.5, 0.5, 0.5) * rotation_z(PI / 5)
+  middle.transform = translation(-0.5, 1.0, 0.5) * rotation_z(PI / 5)
   middle.material = material()
   middle.material.color = color(0.1, 1, 0.5)
   middle.material.diffuse = 0.7
@@ -74,6 +76,7 @@ when is_main_module:
   left.transform = translation(-1.5, 0.33, -0.75) *
                    scaling(0.33, 0.33, 0.33)
   left.material = material()
+  left.material.reflective = 0.43
   left.material.pattern = some(Pattern(g1))
   left.material.color = color(1, 0.8, 0.1)
   left.material.diffuse = 0.7
@@ -83,10 +86,11 @@ when is_main_module:
   let l2 = point_light(point(10, 10, -10), color(0.2, 0.15, 0.7))
   let l3 = point_light(point(2, 5, -10), color(0.3, 0.7, 0.2))
 
-  w.lights = @[light, l2, l3]
+  #w.lights = @[light, l2, l3]
+  w.lights = @[light]
   w.objects = @[floor, backdrop, middle, right, left]
 
-  let c = camera(1960, 1080, PI / 3)
+  let c = camera(800, 600, PI / 3)
   c.transform = view_transform(point(2.1, 2.5, -4),
                                point(0, 0.5, 0),
                                vector(0, 1, 0))

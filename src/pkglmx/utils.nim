@@ -1,5 +1,7 @@
 import core, linalg, shapes
 
+# these should probably be moved to tests
+
 proc default_world*(): World {.inline.} =
   var  
       s1: Shape = sphere()

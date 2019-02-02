@@ -11,6 +11,7 @@ const identity*: Matrix[4] =
   [0.0, 0.0, 1.0, 0.0],
   [0.0, 0.0, 0.0, 1.0]]
 
+# this is not good, had to turn it down from 0.00001 to 0.0001
 const epsilon* = 0.0001
  
 const 

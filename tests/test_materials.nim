@@ -78,6 +78,47 @@ suite "materials":
     check(c1 =~ color(1, 1, 1))
     check(c2 =~ color(0, 0, 0))
 
-  test "reflectivity for the default matrerial":
-    check(m.reflective =~ 0)
-    
+  test "reflectivity for the default material":
+    check(m.reflective == 0)
+
+  test "transparency and refractive index for the default material":
+    check(m.transparency == 0)
+    check(m.refractive_index == 1.0)
+
+  test "a helper for producing a sphere with glassy material":
+    let a = glass_sphere()
+    check(a.transform =~ identity)
+    check(a.material.transparency == 1.0)
+    check(a.material.refractive_index == 1.5)
+
+  test "finding n1 and n2 at verious intersections":
+    var
+      A = glass_sphere()
+      B = glass_sphere()
+      C = glass_sphere()
+    A.transform = scaling(2, 2, 2)
+    A.material.refractive_index = 1.5
+    B.transform = translation(0, 0, -0.25)
+    B.material.refractive_index = 2.0
+    C.transform = translation(0, 0, 0.25)
+    C.material.refractive_index = 2.5
+    let r = ray(point(0, 0, -4), vector(0, 0, 1))
+    let xs = intersections(
+      intersection(2.00, A),
+      intersection(2.75, B),
+      intersection(3.25, C),
+      intersection(4.75, B),
+      intersection(5.25, C),
+      intersection(6.00, A))
+    let cases = @[
+      (0, 1.0, 1.5),
+      (1, 1.5, 2.0),
+      (2, 2.0, 2.5),
+      (3, 2.5, 2.5),
+      (4, 2.5, 1.5),
+      (5, 1.5, 1.0)]
+    for c in cases:
+      let (index, n1, n2) = c
+      let comps = prepare_computations(xs[index], r, xs)
+      check(comps.n1 == n1)
+      check(comps.n2 == n2)

@@ -64,7 +64,7 @@ suite "intersections":
       r = ray(point(0, 0, -5), vector(0, 0, 1))
       shape = sphere()
       i = intersection(4, shape)
-      comps = prepare_computations(i, r)
+      comps = prepare_computations(i, r, @[i])
     check(comps.t == i.t)
     check(comps.obj == i.obj)
     check(comps.point == point(0, 0, -1))
@@ -76,7 +76,7 @@ suite "intersections":
       r = ray(point(0, 0, -5), vector(0, 0, 1))
       shape = sphere()
       i = intersection(4, shape)
-      comps = prepare_computations(i, r)
+      comps = prepare_computations(i, r, @[i])
     check(not comps.inside)
 
   test "the hit, when an intersection occurs on the inside":
@@ -84,7 +84,7 @@ suite "intersections":
       r = ray(point(0, 0, 0), vector(0, 0, 1))
       shape = sphere()
       i = intersection(1, shape)
-      comps = prepare_computations(i, r)
+      comps = prepare_computations(i, r, @[i])
     check(comps.point =~ point(0, 0, 1))
     check(comps.eyev =~ vector(0, 0, -1))
     check(comps.inside)
@@ -98,7 +98,7 @@ suite "intersections":
     shape.transform = translation(0, 0, 1)
     let 
       i = intersection(5, shape)
-      comps = prepare_computations(i, r)
+      comps = prepare_computations(i, r, @[i])
     check(comps.over_point.z < (-epsilon/2.0))
     check(comps.point.z > comps.over_point.z)
     
@@ -107,5 +107,17 @@ suite "intersections":
       shape = plane()
       r = ray(point(0, 1, -1), vector(0, -sqrt(2.0)/2.0, sqrt(2.0)/2.0))
       i = intersection(sqrt(2.0), shape)
-      comps = prepare_computations(i, r)
+      comps = prepare_computations(i, r, @[i])
     check(comps.reflectv == vector(0, sqrt(2.0)/2, sqrt(2.0)/2))
+
+  test "the under point is offset below the surface":
+    var shape = glass_sphere()
+    let 
+      r = ray(point(0, 0, -5), vector(0, 0, 1))
+      i = intersection(5, shape)
+      xs = intersections(i)
+    shape.transform = translation(0, 0, 1)
+    let comps = prepare_computations(i, r, xs)
+    check(comps.under_point.z > epsilon/2)
+    check(comps.point.z < comps.under_point.z)
+    

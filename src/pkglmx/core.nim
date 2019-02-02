@@ -8,9 +8,16 @@ type
     a*: Color
     b*: Color
     transform*: Matrix[4]
-  Material = tuple[color: Color, ambient: float, diffuse: float, 
-                   specular: float, shininess: float, 
-                   reflective: float, pattern: Option[Pattern]]
+  Material = object
+    color*: Color
+    ambient*: float
+    diffuse*: float
+    specular*: float
+    shininess*: float
+    reflective*: float
+    pattern*: Option[Pattern]
+    transparency*: float
+    refractive_index*: float
   Shape* = ref object of RootObj
     transform*: Matrix[4]
     material*: Material
@@ -22,10 +29,13 @@ type
     obj*: Shape
     point*: Vec4
     over_point*: Vec4
+    under_point*: Vec4
     eyev*: Vec4
     normalv*: Vec4
     reflectv*: Vec4
     inside*: bool
+    n1*: float
+    n2*: float
   Camera* = ref object
     hsize*: int
     vsize*: int
@@ -83,7 +93,14 @@ proc point_light*(position: Vec4, intensity: Color): PointLight {.inline.} =
   (intensity, position)
 
 proc material*(): Material {.inline.} =
-  (color(1, 1, 1), 0.1, 0.9, 0.9, 200.0, 0.0, none(Pattern))
+  result.color = color(1, 1, 1)
+  result.ambient = 0.1
+  result.diffuse = 0.9
+  result.specular = 0.9
+  result.shininess = 200.0
+  result.reflective = 0.0
+  result.pattern = none(Pattern)
+  result.refractive_index = 1.0
 
 proc init_pattern*(pat: Pattern) {.inline.} =
   pat.transform = identity
@@ -136,23 +153,40 @@ iterator world_intersections(world: World, ray: Ray): Intersection =
 proc intersect_world*(world: World, ray: Ray): seq[Intersection] =
   toSeq(world_intersections(world, ray)).intersections()
 
-proc prepare_computations*(x: Intersection, ray: Ray): PrepComps {.inline.} =
-  var
-    t = x.t
-    obj = x.obj
-    point = position(ray, t)
-    eyev = -ray.direction
-    normalv = normal_at(obj, point)
-    normalv_dot_eyev = dot(normalv, eyev)
-    inside = false
-    over_point = point + normalv * epsilon
+proc prepare_computations*(x: Intersection, ray: Ray, xs: seq[Intersection]): PrepComps =
+  result.t = x.t
+  result.obj = x.obj
+  result.point = position(ray, result.t)
+  result.eyev = -ray.direction
+  result.normalv = normal_at(result.obj, result.point)
+  result.inside = false
+  let normalv_dot_eyev = dot(result.normalv, result.eyev)
   if normalv_dot_eyev < 0:
-    inside = true
-    normalv = -normalv
-  let reflectv = reflect(ray.direction, normalv)
-  PrepComps(t: t, obj: obj, point: point, over_point: over_point, 
-            eyev: eyev, normalv: normalv, reflectv: reflectv,
-            inside: inside)
+    result.inside = true
+    result.normalv = -result.normalv  
+  result.reflectv = reflect(ray.direction, result.normalv)
+  result.over_point = result.point + result.normalv * epsilon
+  result.under_point = result.point - result.normalv * epsilon
+  
+  var containers: seq[Shape]
+  for i in xs:
+    if i == x:
+      if len(containers) == 0:
+        result.n1 = 1.0
+      else:
+        result.n1 = containers[containers.high].material.refractive_index    
+    
+    if containers.contains(i.obj):
+      containers.delete(containers.find(i.obj))
+    else:
+      containers.add(i.obj)    
+    
+    if i == x:
+      if len(containers) == 0:
+        result.n2 = 1.0
+      else:
+        result.n2 = containers[containers.high].material.refractive_index
+      return
 
 proc is_shadowed*(w: World, p: Vec4, light: PointLight): bool {.inline.} =
   let
@@ -164,26 +198,50 @@ proc is_shadowed*(w: World, p: Vec4, light: PointLight): bool {.inline.} =
     h = hit(xs)
   h.is_some() and h.get().t < distance
 
-proc color_at*(world: World, ray: Ray): Color {.inline.}
+proc color_at*(world: World, ray: Ray, remaining = 5): Color
 
-proc reflected_color*(w: World, comps: PrepComps): Color {.inline.} =
+proc reflected_color*(w: World, comps: PrepComps, remaining = 5): Color {.inline.} =
   if comps.obj.material.reflective == 0:
     return BLACK
   let 
     reflect_ray = ray(comps.over_point, comps.reflectv)
-    color = color_at(w, reflect_ray)  
+    color = color_at(w, reflect_ray, pred(remaining))  
   return color * comps.obj.material.reflective  
 
-proc shade_hit*(world: World, comps: PrepComps): Color {.inline.} =
+proc refracted_color*(w: World, comps: PrepComps, remaining = 5): Color {.inline.} =
+  # max recursion
+  if remaining < 1: return BLACK 
+  
+  # opaque object
+  if comps.obj.material.transparency == 0: return BLACK
+  
+  let
+    n_ratio = comps.n1 / comps.n2
+    cos_i = dot(comps.eyev, comps.normalv)
+    sin2_t = n_ratio * n_ratio * (1 - cos_i * cos_i)
+  
+  # total internal refraction
+  if sin2_t > 1: return BLACK 
+  
+  let
+    cos_t = sqrt(1.0 - sin2_t)
+    direction = comps.normalv * (n_ratio * cos_i - cos_t) - comps.eyev * n_ratio
+    refract_ray = ray(comps.under_point, direction)  
+
+  color_at(w, refract_ray, pred(remaining)) * comps.obj.material.transparency
+
+proc shade_hit*(world: World, comps: PrepComps, remaining = 5): Color {.inline.} =
   result = BLACK
   for light in world.lights:
     let shadowed = is_shadowed(world, comps.over_point, light)
     result = result + lighting(comps.obj.material, comps.obj, light, 
                          comps.over_point, comps.eyev, comps.normalv, 
                          shadowed)
-    result = result + reflected_color(world, comps)    
+    result = result + reflected_color(world, comps, remaining)
+    result = result + refracted_color(world, comps, remaining)
 
-proc color_at*(world: World, ray: Ray): Color {.inline.} =
+proc color_at*(world: World, ray: Ray, remaining = 5): Color =
+  if remaining < 1: return BLACK
   let 
     xs = intersect_world(world, ray)
     maybe_hit = hit(xs)
@@ -191,8 +249,8 @@ proc color_at*(world: World, ray: Ray): Color {.inline.} =
     return BLACK
   let 
     hit = maybe_hit.get()
-    comps = prepare_computations(hit, ray)
-  shade_hit(world, comps)
+    comps = prepare_computations(hit, ray, xs)
+  shade_hit(world, comps, remaining)
 
 proc view_transform*(`from`: Vec4, to: Vec4, up: Vec4): Matrix[4] {.inline.} =
   let 

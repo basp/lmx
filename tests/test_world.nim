@@ -1,5 +1,10 @@
 import unittest, math, sequtils, options, lmx
 
+type TestPattern = ref object of Pattern
+
+method pattern_at(pat: TestPattern, p: Vec4): Color =
+  color(p.x, p.y, p.z)
+
 suite "world":
   test "creating a world":
     let w = world()
@@ -39,7 +44,7 @@ suite "world":
       r = ray(point(0, 0, -5), vector(0, 0, 1))
       shape = w.objects[0]
       i = intersection(4, shape)
-      comps = prepare_computations(i, r)
+      comps = prepare_computations(i, r, @[i])
       c = shade_hit(w, comps)
     check(c =~ color(0.38066, 0.47583, 0.2855))
 
@@ -113,7 +118,7 @@ suite "world":
       s2: Shape = sphere()
       r = ray(point(0, 0, 5), vector(0, 0, 1))
       i = intersection(4, s2)
-      comps = prepare_computations(i, r)
+      comps = prepare_computations(i, r, @[i])
     w.lights = @[point_light(point(0, 0, -10), color(1, 1, 1))]
     w.objects = @[s1, s2]
     let c = shade_hit(w, comps)
@@ -127,7 +132,7 @@ suite "world":
     shape.material.ambient = 1
     let 
       i = intersection(1, shape)
-      comps = prepare_computations(i, r)
+      comps = prepare_computations(i, r, @[i])
       c = reflected_color(w, comps)
     check(c =~ color(0, 0, 0))
 
@@ -141,7 +146,7 @@ suite "world":
     let
       r = ray(point(0, 0, -3), vector(0, -sqrt(2.0)/2, sqrt(2.0)/2))
       i = intersection(sqrt(2.0), shape)
-      comps = prepare_computations(i, r)
+      comps = prepare_computations(i, r, @[i])
       c = reflected_color(w, comps)
     check(c =~ color(0.19032, 0.2379, 0.14274))
 
@@ -155,7 +160,7 @@ suite "world":
     let
       r = ray(point(0, 0, -3), vector(0, -sqrt(2.0)/2, sqrt(2.0)/2))
       i = intersection(sqrt(2.0), shape)
-      comps = prepare_computations(i, r)
+      comps = prepare_computations(i, r, @[i])
       c = shade_hit(w, comps)
     check(c =~ color(0.87677, 0.92436, 0.82918))
 
@@ -172,7 +177,112 @@ suite "world":
     upper.transform = translation(0, 1, 0)
     w.objects.add(lower)
     w.objects.add(upper)
-    let c = color_at(w, r)
+    discard color_at(w, r)
 
+  test "the reflected color at the maximum recursive depth":
+    var
+      w = default_world()
+      shape = plane()
+    shape.material.reflective = 0.5
+    shape.transform = translation(0, -1, 0)
+    w.objects.add(shape)
+    let
+      r = ray(point(0, 0, -3), vector(0, -sqrt(2.0)/2, sqrt(2.0)/2))
+      i = intersection(sqrt(2.0), shape)
+      comps = prepare_computations(i, r, @[i])
+      c = reflected_color(w, comps, 0)
+    check(c == color(0, 0, 0))
 
+  test "the refracted color with an opaque surface":
+    var w = default_world()
+    let 
+      shape = w.objects[0]
+      r = ray(point(0, 0, -5), vector(0, 0, 1))
+      xs = intersections(
+        intersection(4, shape),
+        intersection(6, shape))
+      comps = prepare_computations(xs[0], r, xs)
+      c = refracted_color(w, comps, 5)
+    check(c == color(0, 0, 0))
 
+  test "the refracted color at the maximum recursive depth":
+    var
+      w = default_world()
+      shape = w.objects[0]
+      r = ray(point(0, 0, -5), vector(0, 0, 1))
+      xs = intersections(
+        intersection(4, shape),
+        intersection(6, shape))
+    shape.material.transparency = 1.0
+    shape.material.refractive_index = 1.5
+    let 
+      comps = prepare_computations(xs[0], r, xs)
+      c = refracted_color(w, comps, 0)
+    check(c == color(0, 0, 0))
+
+  test "the refracted color under total internal refraction":
+    var
+      w = default_world()
+      shape = w.objects[0]
+      r = ray(point(0, 0, sqrt(2.0)/2), vector(0, 1, 0))
+      xs = intersections(
+        intersection(-sqrt(2.0)/2, shape),
+        intersection(sqrt(2.0)/2, shape))
+    shape.material.transparency = 1.0
+    shape.material.refractive_index = 1.5
+    let
+      comps = prepare_computations(xs[1], r, xs)
+      c = refracted_color(w, comps)
+    check(c == color(0, 0, 0))
+
+  test "the refracted color with a refracted ray":
+    var
+      pat = TestPattern()
+      w = default_world()
+      A = w.objects[0]
+      B = w.objects[1]
+      r = ray(point(0, 0, 0.1), vector(0, 1, 0))
+      xs = intersections(
+        intersection(-0.9899, A),
+        intersection(-0.4899, B),
+        intersection(0.4899, B),
+        intersection(0.9899, A))
+
+    init_pattern(pat)
+    
+    A.material.ambient = 1.0
+    A.material.pattern = some(Pattern(pat))
+    B.material.transparency = 1.0
+    B.material.refractive_index = 1.5
+
+    let 
+      comps = prepare_computations(xs[2], r, xs)
+      c = refracted_color(w, comps, 5)
+
+    check(c =~ color(0, 0.99888, 0.04725))
+
+  test "shade_hit() with a transparent material":
+    var
+      w = default_world()
+      floor = plane()
+      ball = sphere()
+      r = ray(point(0, 0, -3), vector(0, -sqrt(2.0)/2, sqrt(2.0)/2))
+      xs = intersections(intersection(sqrt(2.0), floor))
+    
+    floor.transform = translation(0, -1, 0)
+    floor.material.transparency = 0.5
+    floor.material.refractive_index = 1.5
+
+    ball.transform = translation(0, -3.5, -0.5)
+    ball.material.color = color(1, 0, 0)
+    ball.material.ambient = 0.5
+
+    w.objects.add(floor)
+    w.objects.add(ball)
+
+    let 
+      comps = prepare_computations(xs[0], r, xs)
+      c = shade_hit(w, comps, 5)
+    
+    check(c =~ color(0.93642, 0.68642, 0.68642))
+    

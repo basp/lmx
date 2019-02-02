@@ -10,3 +10,8 @@ proc default_world*(): World {.inline.} =
   s1.material.specular = 0.2
   s2.transform = scaling(0.5, 0.5, 0.5)
   (@[s1, s2], @[light])
+
+proc glass_sphere*(): Sphere {.inline.} =
+  result = sphere()
+  result.material.transparency = 1.0
+  result.material.refractive_index = 1.5

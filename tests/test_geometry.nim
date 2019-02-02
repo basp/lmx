@@ -90,8 +90,21 @@ suite "geometry":
     check(dot(a, b) =~ 20)
 
   test "the cross product of two vectors":
-      let a = initVector3(1, 2, 3)
-      let b = initVector3(2, 3, 4)
-      check(cross(a, b) =~ initVector3(-1, 2, -1))
-      check(cross(b, a) =~ initVector3(1, -2, 1))
-      
+    let a = initVector3(1, 2, 3)
+    let b = initVector3(2, 3, 4)
+    check(cross(a, b) =~ initVector3(-1, 2, -1))
+    check(cross(b, a) =~ initVector3(1, -2, 1))
+
+  test "reflecting a vector approaching at 45 deg":
+    let 
+      v = initVector3(1.0, -1, 0)
+      n = initVector3(0.0, 1, 0)
+      r = reflect(v, n)
+    check(r =~ initVector3(1, 1, 0))
+
+  # test "reflecting a vector off a slanted surface":
+  #     let
+  #         v = vector(0, -1, 0)
+  #         n = vector(sqrt(2.0) / 2, sqrt(2.0) / 2, 0)
+  #         r = reflect(v, n)
+  #     check(r =~ vector(1, 0, 0))    

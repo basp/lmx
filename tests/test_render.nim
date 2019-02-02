@@ -30,17 +30,4 @@ suite "colors":
     let c1 = initColor(1.0, 0.2, 0.4)
     let c2 = initColor(0.9, 1.0, 0.1)
     check(c1 |*| c2 =~ initColor(0.9, 0.2, 0.04))
-
-  test "reflecting a vector approaching at 45 deg":
-    let 
-      v = initVector3(1.0, -1, 0)
-      n = initVector3(0.0, 1, 0)
-      r = reflect(v, n)
-    check(r =~ initVector3(1, 1, 0))
-
-  # test "reflecting a vector off a slanted surface":
-  #     let
-  #         v = vector(0, -1, 0)
-  #         n = vector(sqrt(2.0) / 2, sqrt(2.0) / 2, 0)
-  #         r = reflect(v, n)
-  #     check(r =~ vector(1, 0, 0))
+    

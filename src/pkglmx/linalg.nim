@@ -11,7 +11,7 @@ const identity*: Matrix[4] =
   [0.0, 0.0, 1.0, 0.0],
   [0.0, 0.0, 0.0, 1.0]]
 
-const epsilon* = 0.0001
+const epsilon* = 0.00001
  
 const 
   BLACK*: Color = (0.0, 0.0, 0.0)

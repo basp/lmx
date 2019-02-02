@@ -1,15 +1,7 @@
 import unittest, math
-import pkglmx/geometry
-
-proc `=~`(v1, v2: Float): bool =
-  const eps = 0.00001
-  abs(v1 - v2) < eps
-
-proc `=~`[T](v1, v2: Vector3[T]): bool =
-  v1.x =~ v2.x and v1.y =~ v2.y and v1.z =~ v2.z
-
-proc `=~`[T](p1, p2: Point3[T]): bool =
-  p1.x =~ p2.x and p1.y =~ p2.y and p1.z =~ p2.z
+import pkglmx/common,
+       pkglmx/geometry,
+       utils
 
 suite "geometry":
   test "adding two vectors":
@@ -102,42 +94,4 @@ suite "geometry":
       let b = initVector3(2, 3, 4)
       check(cross(a, b) =~ initVector3(-1, 2, -1))
       check(cross(b, a) =~ initVector3(1, -2, 1))
-
-  # test "colors are (red, green, blue) tuples":
-  #     let c = color(-0.5, 0.4, 1.7)
-  #     check(c.r == -0.5)
-  #     check(c.g == 0.4)
-  #     check(c.b == 1.7)
-
-  # test "adding colors":
-  #     let c1 = color(0.9, 0.6, 0.75)
-  #     let c2 = color(0.7, 0.1, 0.25)
-  #     check((c1 + c2) =~ color(1.6, 0.7, 1.0))
-
-  # test "subtracting colors":
-  #     let c1 = color(0.9, 0.6, 0.75)
-  #     let c2 = color(0.7, 0.1, 0.25)
-  #     check((c1 - c2) =~ color(0.2, 0.5, 0.5))
-
-  # test "multiplying a color by a scalar":
-  #     let c = color(0.2, 0.3, 0.4)
-  #     check((c * 2) =~ color(0.4, 0.6, 0.8))
-
-  # test "multiplying colors":
-  #     let c1 = color(1.0, 0.2, 0.4)
-  #     let c2 = color(0.9, 1.0, 0.1)
-  #     check((c1 * c2) =~ color(0.9, 0.2, 0.04))
-
-  # test "reflecting a vector approaching at 45 deg":
-  #     let 
-  #         v = vector(1, -1, 0)
-  #         n = vector(0, 1, 0)
-  #         r = reflect(v, n)
-  #     check(r =~ vector(1, 1, 0))
-
-  # test "reflecting a vector off a slanted surface":
-  #     let
-  #         v = vector(0, -1, 0)
-  #         n = vector(sqrt(2.0) / 2, sqrt(2.0) / 2, 0)
-  #         r = reflect(v, n)
-  #     check(r =~ vector(1, 0, 0))
+      

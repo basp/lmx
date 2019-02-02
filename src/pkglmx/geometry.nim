@@ -1,9 +1,6 @@
 # this module is to replace linalg eventually
 import math, fenv, sequtils
-
-type
-  Float* = float32
-  Number* = Float | int
+import common
 
 converter toFloat*(v: float64): Float {.inline.} =
   ## Crudely converts a double to a ``Float``.
@@ -114,3 +111,5 @@ template cross*[T](a, b: Vector3[T]): Vector3[T] =
               a.z * b.x - a.x * b.z,
               a.x * b.y - a.y * b.x)
 
+proc reflect*[T](v, normal: Vector3[T]): Vector3[T] =
+  v - normal * 2 * dot(v, normal)

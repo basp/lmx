@@ -121,3 +121,33 @@ suite "intersections":
     check(comps.under_point.z > epsilon/2)
     check(comps.point.z < comps.under_point.z)
     
+  test "the Schlick approximation under total internal reflection":
+    let 
+      shape = glass_sphere()
+      r = ray(point(0, 0, sqrt(2.0)/2), vector(0, 1, 0))
+      xs = intersections(
+        intersection(-sqrt(2.0)/2, shape),
+        intersection(sqrt(2.0)/2, shape))
+      comps = prepare_computations(xs[1], r, xs)
+      reflectance = schlick(comps)
+    check(reflectance == 1.0)
+
+  test "the Schlick approximation with a perpendicular viewing angle":
+    let
+      shape = glass_sphere()
+      r = ray(point(0, 0, 0), vector(0, 1, 0))
+      xs = intersections(
+        intersection(-1, shape),
+        intersection(1, shape))
+      comps = prepare_computations(xs[1], r, xs)
+      reflectance = schlick(comps)
+    check(reflectance =~ 0.04)
+
+  test "the Schlick approximation with a small angle and n2 > n1":
+    let
+      shape = glass_sphere()
+      r = ray(point(0, 0.99, -2), vector(0, 0, 1))
+      xs = intersections(intersection(1.8589, shape))
+      comps = prepare_computations(xs[0], r, xs)
+      reflectance = schlick(comps)
+    check(reflectance =~ 0.48873)

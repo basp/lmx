@@ -34,25 +34,25 @@ converter toVector3f*(v: Vector3i): Vector3f {.inline.} =
   result.z = Float(v.z)
 
 proc initVector3*[T: Number](x, y, z: T): Vector3[T] {.inline.} =
-  ## Initializes a new vector with 3 components of type ``T``.
+  ## Initializes a new vector with components of type ``T``.
   result.x = x
   result.y = y
   result.z = z
 
 proc initPoint3*[T: Number](x, y, z: T): Point3[T] {.inline.} =
-  ## Initializes a new point with 3 components of type ``T``.
+  ## Initializes a new point with components of type ``T``.
   result.x = x
   result.y = y
   result.z = z
 
 proc `+`*[T](a, b: Vector3[T]): Vector3[T] {.inline.} =
-  ## Add two vectors component-wise.
+  ## Adding two vectors yields a new vector.
   result.x = a.x + b.x
   result.y = a.y + b.y
   result.z = a.z + b.z
 
 proc `-`*[T](a, b: Point3[T]): Vector3[T] {.inline.} =
-  ## Subtract two vectors component-wise.
+  ## Subtracting two points yields a vector.
   result.x = a.x - b.x
   result.y = a.y - b.y
   result.z = a.z - b.z
@@ -101,11 +101,11 @@ proc normalize*[T](v: Vector3[T]): Vector3f {.inline.} =
   result.y = v.y / mag
   result.z = v.z / mag
 
-template dot*[T](a, b: Vector3[T]): T  =
+proc dot*[T](a, b: Vector3[T]): T  =
   ## The *dot product* of two vectors.
   a.x * b.x + a.y * b.y + a.z * b.z
 
-template cross*[T](a, b: Vector3[T]): Vector3[T] =
+proc cross*[T](a, b: Vector3[T]): Vector3[T] =
   ## The *cross product* of two vectors.
   initVector3(a.y * b.z - a.z * b.y,
               a.z * b.x - a.x * b.z,

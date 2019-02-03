@@ -9,9 +9,6 @@ import pkglmx/core,
 
 export core, linalg, patterns, shapes, canvas, utils
 
-
-
-
 when is_main_module:
   proc clamp(value: int, min: int, max: int): int {.inline.} =
     if value < min: return min
@@ -26,7 +23,7 @@ when is_main_module:
       b = int(255.99 * c.b).clamp(0, 255)
     (r, g, b)
 
-  var checkers = checkers_pattern(color(0.2, 0.5, 1), color(0, 0, 0.2))
+  var checkers = checkers_pattern(color(1, 1, 1), color(0, 0, 0.0))
   checkers.transform = scaling(2.0, 2.0, 2.0)
 
   let floor: Shape = plane()
@@ -36,12 +33,14 @@ when is_main_module:
   let s1: Shape = sphere()
   s1.transform = translation(0, 1, 0)
   s1.material = material()
-  s1.material.specular = 0.5
-  s1.material.ambient = 0.02
-  s1.material.diffuse = 0.02
-  s1.material.reflective = 0.53
+  s1.material.color = color(0.02, 0, 0)
+  s1.material.specular = 0.9
+  s1.material.shininess = 350
+  s1.material.ambient = 0.06
+  s1.material.diffuse = 0.07
+  s1.material.reflective = 0.13
   s1.material.transparency = 0.98
-  # s1.material.refractive_index = 1.00029 # air
+  #s1.material.refractive_index = 1.00029 # air
   s1.material.refractive_index = 1.52 # water
 
   let s2: Shape = sphere()
@@ -60,10 +59,10 @@ when is_main_module:
 
   var w = world()
   w.lights = @[light]
-  w.objects = @[floor, s1, s2, s3]
+  w.objects = @[floor, s1, s2]
 
   let c = camera(400, 200, PI / 3)
-  c.transform = view_transform(point(5, 2.5, -2.5),
+  c.transform = view_transform(point(4, 5.5, -3.5),
                                point(0, 0.5, 0),
                                vector(0, 1, 0))
   

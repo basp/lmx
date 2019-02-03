@@ -285,4 +285,30 @@ suite "world":
       c = shade_hit(w, comps, 5)
     
     check(c =~ color(0.93642, 0.68642, 0.68642))
+
+  test "shade_hit() with a reflective, transparent material":
+    var
+      w = default_world()
+      r = ray(point(0, 0, -3), vector(0, -sqrt(2.0)/2, sqrt(2.0)/2))
+      floor = plane()
+      ball = sphere()
+      xs = intersections(intersection(sqrt(2.0), floor))
+
+    floor.transform = translation(0, -1, 0)
+    floor.material.reflective = 0.5
+    floor.material.transparency = 0.5
+    floor.material.refractive_index = 1.5
+
+    ball.transform = translation(0, -3.5, -0.5)
+    ball.material.color = color(1, 0, 0)
+    ball.material.ambient = 0.5
+    
+    w.objects.add(floor)
+    w.objects.add(ball)
+
+    let
+      comps = prepare_computations(xs[0], r, xs)
+      c = shade_hit(w, comps, 5)
+    
+    check(c =~ color(0.93391, 0.69643, 0.69243))
     

@@ -230,15 +230,35 @@ proc refracted_color*(w: World, comps: PrepComps, remaining = 5): Color {.inline
 
   color_at(w, refract_ray, pred(remaining)) * comps.obj.material.transparency
 
+proc schlick*(comps: PrepComps): float {.inline.} =
+  var cos = dot(comps.eyev, comps.normalv)
+  if comps.n1 > comps.n2:
+    let 
+      n = comps.n1 / comps.n2
+      sin2_t = n * n * (1.0 - cos * cos)
+    if sin2_t > 1.0:
+      return 1.0
+    let cos_t = sqrt(1.0 - sin2_t)
+    cos = cos_t      
+  let r0 = pow((comps.n1 - comps.n2) / (comps.n1 + comps.n2), 2)
+  r0 + (1 - r0) * pow(1 - cos, 5)
+
 proc shade_hit*(world: World, comps: PrepComps, remaining = 5): Color {.inline.} =
   result = BLACK
   for light in world.lights:
-    let shadowed = is_shadowed(world, comps.over_point, light)
-    result = result + lighting(comps.obj.material, comps.obj, light, 
-                         comps.over_point, comps.eyev, comps.normalv, 
-                         shadowed)
-    result = result + reflected_color(world, comps, remaining)
-    result = result + refracted_color(world, comps, remaining)
+    let 
+      shadowed = is_shadowed(world, comps.over_point, light)
+      surface = lighting(comps.obj.material, comps.obj, light, 
+                        comps.over_point, comps.eyev, comps.normalv, 
+                        shadowed)
+      reflected = reflected_color(world, comps, remaining)
+      refracted = refracted_color(world, comps, remaining)
+      material = comps.obj.material
+    if material.reflective > 0 and material.transparency > 0:
+      let reflectance = schlick(comps)
+      result = result + (surface + reflected * reflectance + refracted * (1 - reflectance))
+    else:
+      result = result + (surface + reflected + refracted)
 
 proc color_at*(world: World, ray: Ray, remaining = 5): Color =
   if remaining < 1: return BLACK

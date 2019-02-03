@@ -1,4 +1,3 @@
-# this module is to replace linalg eventually
 import math, fenv, sequtils
 import common
 

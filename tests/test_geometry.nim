@@ -102,9 +102,9 @@ suite "geometry":
       r = reflect(v, n)
     check(r =~ initVector3(1, 1, 0))
 
-  # test "reflecting a vector off a slanted surface":
-  #     let
-  #         v = vector(0, -1, 0)
-  #         n = vector(sqrt(2.0) / 2, sqrt(2.0) / 2, 0)
-  #         r = reflect(v, n)
-  #     check(r =~ vector(1, 0, 0))    
+  test "reflecting a vector off a slanted surface":
+    let
+      v = initVector3(0.0, -1, 0)
+      n = initVector3(sqrt(2.0) / 2, sqrt(2.0) / 2, 0)
+      r = reflect(v, n)
+    check(r =~ initVector3(1, 0, 0))    

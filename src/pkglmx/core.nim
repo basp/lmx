@@ -1,14 +1,16 @@
-import math, sequtils, options, algorithm, times, linalg
-{.experimental: "parallel".}
+import math, sequtils, options, algorithm, times
+import linalg
 
 type 
+  #Float* = float32
+  #Number* = Float | int    
   Ray* = tuple[origin: Vec4, direction: Vec4]
   PointLight = tuple[intensity: Color, position: Vec4]
   Pattern* = ref object of RootObj
     a*: Color
     b*: Color
     transform*: Matrix[4]
-  Material = object
+  Material* = object
     color*: Color
     ambient*: float
     diffuse*: float

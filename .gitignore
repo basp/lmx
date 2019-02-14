@@ -1,3 +1,5 @@
+src/**/*.html
+attic/
 .vscode/
 nimcache/
 *.swp

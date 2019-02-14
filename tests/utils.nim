@@ -1,16 +1,38 @@
-import pkglmx/common,
-       pkglmx/geometry,
-       pkglmx/render
+import lmx
 
-proc `=~`*(v1, v2: Float): bool =
+proc `=~`*(a, b: float): bool =
   const eps = 0.00001
-  abs(v1 - v2) < eps
-  
-proc `=~`*[T](v1, v2: Vector3[T]): bool =
-  v1.x =~ v2.x and v1.y =~ v2.y and v1.z =~ v2.z
+  abs(a - b) < eps
 
-proc `=~`*[T](p1, p2: Point3[T]): bool =
-  p1.x =~ p2.x and p1.y =~ p2.y and p1.z =~ p2.z
+template `=~`*(a, b: Vector3|Point3|Normal3): bool =
+  a.x =~ b.x and a.y =~ b.y and a.z =~ b.z
 
-proc `=~`*(c1, c2: Color): bool =
-  c1.r =~ c2.r and c1.g =~ c2.g and c1.b =~ c2.b
+# proc `=~`*(a, b: Color): bool =
+#   a.r =~ b.r and a.g =~ b.g and a.b =~ b.b
+
+# proc `=~`*(a, b: Matrix4): bool =
+#   for i in 0..3:
+#     for j in 0..3:
+#       if not (a[i, j] =~ b[i, j]): 
+#         return false
+#   true
+
+# proc `=~`*(a, b: Matrix3): bool =
+#   for i in 0..2:
+#     for j in 0..2:
+#       if not (a[i, j] =~ b[i, j]):
+#         return false
+#   true
+
+# proc `=~`*(a, b: Matrix2): bool =
+#   for i in 0..1:
+#     for j in 0..1:
+#       if not (a[i, j] =~ b[i, j]):
+#         return false
+#   true
+
+# proc `=~`*(a, b: Material): bool =
+#   a.color =~ b.color and 
+#     a.ambient =~ b.ambient and
+#     a.diffuse =~ b.diffuse and
+#     a.specular =~ b.specular

@@ -1,17 +1,31 @@
 import math
+
 import pkglmx/geometry,
-       pkglmx/sugar
+       pkglmx/transform,
+       pkglmx/colors,
+       pkglmx/world,
+       pkglmx/canvas
+
 export geometry,
-       sugar
+       transform,
+       colors,
+       world,
+       canvas
 
 when isMainModule:
   let 
-    v = vector(1, 2, 3.5)
-    p = point(1, 2.5, 3)
-    n = normal(1, 2, 3)
-  echo v
-  echo p
-  echo n
-  echo p[1]
-  echo n[1]
-  echo v + v
+    c = newCanvas(400, 400)
+    p = point(0, 1, 0)
+  const n = 12
+  for i in 0..pred(n):
+    let 
+      r = float(i) * (2 * PI / n)
+      t = identityMatrix.
+        rotateZ(r).
+        scale(180, 180, 1).
+        translate(200, 200, 0)
+      pt = t * p
+      ix = int(pt.x)
+      iy = int(pt.y)
+    c[ix, iy] = initColor(1, 1, 1)
+  c.savePPM("out.ppm")

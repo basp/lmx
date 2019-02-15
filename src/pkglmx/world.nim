@@ -15,7 +15,7 @@ proc initIntersection*(t: float, obj: Shape): Intersection {.inline.} =
 template intersection*(t: float, obj: Shape): Intersection =
   initIntersection(t, obj)
 
-proc intersections*(xs: varargs[Intersection]): seq[Intersection] {.inline.} =
+proc toSeq*(xs: varargs[Intersection]): seq[Intersection] {.inline.} =
   result = @(xs)
   result.sort do (x, y: Intersection) -> int: cmp(x.t, y.t)
   
@@ -33,6 +33,9 @@ method intersect*(s: Shape, r: Ray): seq[float] {.base.} =
 
 method intersect*(s: Sphere, r: Ray): seq[float] =
   let
+    # Since r.origin is a point and not a vector
+    # we need to create a vector first so we can
+    # calculate a dot product.
     sphereToRay = r.origin - point(0, 0, 0)
     a = dot(r.direction, r.direction)
     b = 2 * dot(r.direction, sphereToRay)

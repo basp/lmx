@@ -5,8 +5,6 @@ type
     x*, y*, z*: float
   Point3* = object
     x*, y*, z*: float
-  Normal3* = object
-    x*, y*, z*: float
 
 proc initVector3*(x, y, z: float): Vector3 {.inline.} =
   result.x = x
@@ -18,19 +16,11 @@ proc initPoint3*(x, y, z: float): Point3 {.inline.} =
   result.y = y
   result.z = z
 
-proc initNormal3*(x, y, z: float): Normal3 {.inline.} =
-  result.x = x
-  result.y = y
-  result.z = z
-
 proc `$`*(v: Vector3): string =
   fmt"Vector3({v.x}, {v.y}, {v.z})"
 
 proc `$`*(p: Point3): string =
   fmt"Point3({p.x}, {p.y}, {p.z})"
-
-proc `$`*(n: Normal3): string =
-  fmt"Normal3({n.x}, {n.y}, {n.z})"
 
 proc `+`*(a, b: Vector3): Vector3 {.inline.} =
   result.x = a.x + b.x
@@ -102,10 +92,10 @@ proc `-`*(v: Vector3): Vector3 {.inline.} =
   result.y = -v.y
   result.z = -v.z
 
-proc magnitude*(v: Vector3): float {.inline.} =
+proc magnitude*[T: Vector3](v: T): float {.inline.} =
   sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
 
-proc normalize*(v: Vector3): Vector3 {.inline.} =
+proc normalize*[T: Vector3](v: T): T {.inline.} =
   let factor = 1 / v.magnitude()
   result.x = v.x * factor
   result.y = v.y * factor
@@ -119,16 +109,16 @@ proc cross*(a, b: Vector3): Vector3 {.inline.} =
   result.y = a.z * b.x - a.x * b.z
   result.z = a.x * b.y - a.y * b.x
 
+proc reflect*(v, n: Vector3): Vector3 {.inline.} =
+  v - n * 2 * dot(v, n)
+
 template vector*(x, y, z: float): Vector3 =
   initVector3(x, y, z)
 
 template point*(x, y, z: float): Point3 =
   initPoint3(x, y, z)
 
-template normal*(x, y, z: float): Normal3 =
-  initNormal3(x, y, z)
-
-template `[]`*(t: Vector3|Point3|Normal3, i: int): float =
+template `[]`*(t: Vector3|Point3, i: int): float =
   case i 
   of 0: t.x
   of 1: t.y

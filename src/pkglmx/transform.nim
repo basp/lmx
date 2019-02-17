@@ -174,11 +174,12 @@ template matrix*(m00, m01, m02, m03,
 
 type
   Transform* = object
-    m*, inv*: Matrix4x4
+    m*, inv*, invt*: Matrix4x4
 
 proc initTransform*(m: Matrix4x4): Transform {.inline.} =
   result.m = m
   result.inv = m.inverse()
+  result.invt = result.inv.transpose()
 
 template translation*(x, y, z: float): Matrix4x4 =
   matrix(1, 0, 0, x,
@@ -233,3 +234,7 @@ proc rotateZ*(m: Matrix4x4, r: float): Matrix4x4 {.inline.} =
 
 proc shear*(m: Matrix4x4, xy, xz, yx, yz, zx, zy: float): Matrix4x4 {.inline.} =
   shearing(xy, xz, yz, yz, zx, zy) * m
+
+proc `*`*(m: Matrix4x4, ray: Ray): Ray {.inline.} =
+  result.origin = m * ray.origin
+  result.direction = m * ray.direction

@@ -23,8 +23,8 @@ suite "rays":
       s = newSphere()
       xs = s.intersect(r)
     check(len(xs) == 2)
-    check(xs[0] =~ 4.0)
-    check(xs[1] =~ 6.0)
+    check(xs[0].t =~ 4.0)
+    check(xs[1].t =~ 6.0)
   
   test "a ray intersects a sphere at a tangent":
     let
@@ -32,8 +32,8 @@ suite "rays":
       s = newSphere()
       xs = s.intersect(r)
     check(len(xs) == 2)
-    check(xs[0] =~ 5.0)
-    check(xs[1] =~ 5.0)
+    check(xs[0].t =~ 5.0)
+    check(xs[1].t =~ 5.0)
 
   test "a ray misses a sphere":
     let
@@ -48,8 +48,8 @@ suite "rays":
       s = newSphere()
       xs = s.intersect(r)
     check(len(xs) == 2)
-    check(xs[0] =~ -1.0)
-    check(xs[1] =~ 1.0)
+    check(xs[0].t =~ -1.0)
+    check(xs[1].t =~ 1.0)
 
   test "a sphere is behind a ray":
     let
@@ -57,5 +57,21 @@ suite "rays":
       s = newSphere()
       xs = s.intersect(r)
     check(len(xs) == 2)
-    check(xs[0] =~ -6.0)
-    check(xs[1] =~ -4.0)
+    check(xs[0].t =~ -6.0)
+    check(xs[1].t =~ -4.0)
+
+  test "translating a ray":
+    let
+      r = ray(point(1, 2, 3), vector(0, 1, 0))
+      m = translation(3, 4, 5)
+      r2 = m * r
+    check(r2.origin =~ point(4, 6, 8))
+    check(r2.direction =~ vector(0, 1, 0))
+
+  test "scaling a ray":
+    let
+      r = ray(point(1, 2, 3), vector(0, 1, 0))
+      m = scaling(2, 3, 4)
+      r2 = m * r
+    check(r2.origin =~ point(2, 6, 12))
+    check(r2.direction =~ vector(0, 3, 0))

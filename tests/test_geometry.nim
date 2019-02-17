@@ -1,19 +1,10 @@
 import unittest, math
 import lmx, utils
 
+const 
+  sqrt2over2 = sqrt(2.0) / 2
+
 suite "geometry":
-  test "create points using sugar":
-    let p = point(0.1, 0.2, 0.3)
-    check(p.x == 0.1)
-    check(p.y == 0.2)
-    check(p.z == 0.3)
-
-  test "create vectors using sugar":
-    let v = vector(1, 2, 3)
-    check(v.x == 1.0)
-    check(v.y == 2.0)
-    check(v.z == 3.0)
-
   test "addition of a point and a vector":
     let 
       p = point(3, -2, 5)
@@ -100,3 +91,17 @@ suite "geometry":
       b = vector(2, 3, 4)
     check(a.cross(b) == vector(-1, 2, -1))
     check(b.cross(a) == vector(1, -2, 1))
+
+  test "reflecting a vector approaching at 45 deg":
+    let
+      v = vector(1, -1, 0)
+      n = vector(0, 1, 0)
+      r = v.reflect(n)
+    check(r =~ vector(1, 1, 0))
+
+  test "reflecting a vector off a slanted surface":
+    let
+      v = vector(0, -1, 0)
+      n = vector(sqrt2over2, sqrt2over2, 0)
+      r = v.reflect(n)
+    check(r =~ vector(1, 0, 0))

@@ -4,7 +4,7 @@ proc `=~`*(a, b: float): bool =
   const eps = 0.00001
   abs(a - b) < eps
 
-template `=~`*(a, b: Vector3|Point3|Normal3): bool =
+template `=~`*(a, b: Vector3|Point3): bool =
   a.x =~ b.x and a.y =~ b.y and a.z =~ b.z
 
 proc `=~`*(a, b: Color): bool =

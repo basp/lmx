@@ -12,10 +12,13 @@ type
     a*, b*: Color
   RingPattern = ref object of Pattern
     a*, b*: Color
+  CheckersPattern = ref object of Pattern
+    a*, b*: Color
   Material = object
     pattern*: Option[Pattern]
     color*: Color
-    ambient*, diffuse*, specular*, shininess*: float
+    ambient*, diffuse*, specular*, shininess*, 
+      reflective*: float
   Shape* = ref object of RootObj
     material*: Material
     transform*: Transform
@@ -70,6 +73,12 @@ proc newRingPattern*(a, b: Color): RingPattern {.inline.} =
   result.a = a
   result.b = b
 
+proc newCheckersPattern*(a, b: Color): CheckersPattern {.inline.} =
+  result = new CheckersPattern
+  result.transform = identityMatrix.initTransform()
+  result.a = a
+  result.b = b
+
 method colorAt*(pat: StripePattern, p: Point3): Color =
   if floor(p.x) mod 2 == 0: pat.a else: pat.b
 
@@ -81,6 +90,13 @@ method colorAt*(pat: GradientPattern, p: Point3): Color =
 
 method colorAt*(pat: RingPattern, p: Point3): Color =
   if floor(sqrt(p.x * p.x + p.z + p.z)) mod 2 == 0: pat.a else: pat.b
+
+method colorAt*(pat: CheckersPattern, p: Point3): Color =
+  let
+    fx = floor(p.x)
+    fy = floor(p.y)
+    fz = floor(p.z)
+  if (fx + fy + fz) mod 2 == 0: pat.a else: pat.b
 
 proc colorAt*(pat: Pattern, obj: Shape, worldPoint: Point3): Color =
   let
@@ -233,10 +249,9 @@ proc shadowed*(w: World, p: Point3, light: PointLight): bool {.inline.} =
   maybeHit.isSome() and maybeHit.get().t < distance
 
 proc shade*(w: World, comps: Computations): Color {.inline.} =
+  let m = comps.obj.material
   for light in w.lights:
-    let 
-      m = comps.obj.material  
-      shadow = w.shadowed(comps.overPoint, light)
+    let shadow = w.shadowed(comps.overPoint, light)
     result += m.li(comps.obj, light, comps.overPoint, 
                    comps.eyev, comps.normalv, shadow)
 

@@ -62,5 +62,10 @@ suite "patterns":
     check(pat.colorAt(point(0.25, 0, 0)) =~ color(0.75, 0.75, 0.75))
     check(pat.colorAt(point(0.5, 0, 0)) =~ color(0.5, 0.5, 0.5))
     check(pat.colorAt(point(0.75, 0, 0)) =~ color(0.25, 0.25, 0.25))
-    
 
+  test "a righ should extend in both x and z":
+    let pat = newRingPattern(white, black)
+    check(pat.colorAt(point(0, 0, 0)) =~ white)
+    check(pat.colorAt(point(1, 0, 0)) =~ black)
+    check(pat.colorAt(point(0, 0, 1)) =~ black)
+    check(pat.colorAt(point(0.708, 0, 0.708)) =~ black)

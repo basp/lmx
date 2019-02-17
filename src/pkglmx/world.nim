@@ -10,6 +10,8 @@ type
     a*, b*: Color
   GradientPattern = ref object of Pattern
     a*, b*: Color
+  RingPattern = ref object of Pattern
+    a*, b*: Color
   Material = object
     pattern*: Option[Pattern]
     color*: Color
@@ -62,6 +64,12 @@ proc newGradientPattern*(a, b: Color): GradientPattern {.inline.} =
   result.a = a
   result.b = b
 
+proc newRingPattern*(a, b: Color): RingPattern {.inline.} =
+  result = new RingPattern
+  result.transform = identityMatrix.initTransform()
+  result.a = a
+  result.b = b
+
 method colorAt*(pat: StripePattern, p: Point3): Color =
   if floor(p.x) mod 2 == 0: pat.a else: pat.b
 
@@ -70,6 +78,9 @@ method colorAt*(pat: GradientPattern, p: Point3): Color =
     distance = pat.b - pat.a
     fraction = p.x - floor(p.x)
   pat.a + distance * fraction
+
+method colorAt*(pat: RingPattern, p: Point3): Color =
+  if floor(sqrt(p.x * p.x + p.z + p.z)) mod 2 == 0: pat.a else: pat.b
 
 proc colorAt*(pat: Pattern, obj: Shape, worldPoint: Point3): Color =
   let

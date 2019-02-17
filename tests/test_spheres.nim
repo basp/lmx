@@ -1,4 +1,4 @@
-import unittest, math
+import unittest, math, options
 import lmx, utils
 
 const

@@ -59,3 +59,44 @@ suite "intersections":
       i = xs.tryGetHit()
     check(i.isSome())
     check(i.get() == i4)
+
+  test "precomputing the state of an intersection":
+    let
+      r = ray(point(0, 0, -5), vector(0, 0, 1))
+      shape = newSphere()
+      i = intersection(4, shape)
+      comps = i.precompute(r)
+    check(comps.t == i.t)
+    check(comps.obj == i.obj)
+    check(comps.point =~ point(0, 0, -1))
+    check(comps.eyev =~ vector(0, 0, -1))
+    check(comps.normalv =~ vector(0, 0, -1))
+
+  test "the hit, when an intersection occurs on the outside":
+    let
+      r = ray(point(0, 0, -5), vector(0, 0, 1))
+      shape = newSphere()
+      i = intersection(4, shape)
+      comps = i.precompute(r)
+    check(not comps.inside)
+
+  test "the hit, when an intersection occurs on the inside":
+    let
+      r = ray(point(0, 0, 0), vector(0, 0, 1))
+      shape = newSphere()
+      i = intersection(1, shape)
+      comps = i.precompute(r)
+    check(comps.point =~ point(0, 0, 1))
+    check(comps.eyev =~ vector(0, 0, -1))
+    check(comps.inside)
+    check(comps.normalv =~ vector(0, 0, -1))
+
+  test "the hit should offset the point":
+    let
+      r = ray(point(0, 0, -5), vector(0, 0, 1))
+      shape = newSphere()
+      i = intersection(5, shape)
+    shape.transform = translation(0, 0, 1).initTransform()
+    let comps = i.precompute(r)
+    check(comps.overPoint.z < -lmx.epsilon / 2)
+    check(comps.point.z > comps.overPoint.z)

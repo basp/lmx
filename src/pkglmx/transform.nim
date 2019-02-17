@@ -217,6 +217,18 @@ template shearing*(xy, xz, yx, yz, zx, zy: float): Matrix4x4 =
          zx, zy, 1, 0,
          0, 0, 0, 1)
 
+template view*(`from`, to: Point3, up: Vector3): Matrix4x4 =
+  let 
+    fwd = normalize(to - `from`)
+    upn = up.normalize()
+    left = cross(fwd, upn)
+    trueUp = cross(left, fwd)
+    orientation = matrix(left.x, left.y, left.z, 0,
+                         trueUp.x, trueUp.y, trueUp.z, 0,
+                         -fwd.x, -fwd.y, -fwd.z, 0,
+                         0, 0, 0, 1)
+  orientation * translation(-`from`.x, -`from`.y, -`from`.z)
+
 proc translate*(m: Matrix4x4, x, y, z: float): Matrix4x4 {.inline.} =
   translation(x, y, z) * m
 

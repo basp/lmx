@@ -1,7 +1,7 @@
 import colors
 
 type
-  Canvas = ref object
+  Canvas* = ref object
     width*: int
     height*: int
     pixels: seq[Color]

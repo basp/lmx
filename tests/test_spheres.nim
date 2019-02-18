@@ -88,3 +88,9 @@ suite "spheres":
     m.ambient = 1.0
     s.material = m
     check(s.material == m)
+
+  test "a helper for producing a sphere with a glassy material":
+    let s = newGlassSphere()
+    check(s.transform.m =~ identityMatrix)
+    check(s.material.transparency == 1.0)
+    check(s.material.refractiveIndex == 1.5)

@@ -1,6 +1,16 @@
 import math
 import lmx
 
+type
+  TestPattern* = ref object of Pattern
+
+proc newTestPattern*(): TestPattern =
+  result = new TestPattern
+  result.transform = identityMatrix.initTransform()
+
+method colorAt*(pat: TestPattern, p: Point3): Color =
+  color(p.x, p.y, p.z)
+
 const
   sqrt2over2* = sqrt(2.0) / 2
   sqrt3over3* = sqrt(3.0) / 3
@@ -49,6 +59,11 @@ proc newDefaultWorld*(): World =
   result.lights.add(light)
   result.objects.add(s1)
   result.objects.add(s2)
+
+proc newGlassSphere*(): Sphere =
+  result = newSphere()
+  result.material.transparency = 1.0
+  result.material.refractiveIndex = 1.5
 
 # proc `=~`*(a, b: Material): bool =
 #   a.color =~ b.color and 

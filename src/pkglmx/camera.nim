@@ -41,6 +41,6 @@ proc render*(c: Camera, w: World): Canvas =
     for x in 0..pred(c.hsize):
       let
         ray = c.rayForPixel(x, y)
-        color = w.colorAt(ray)
+        color = w.colorAt(ray, 5)
       result[x, y] = color
       

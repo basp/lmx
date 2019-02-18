@@ -75,3 +75,7 @@ suite "materials":
 
   test "reflectivity for the default material":
     check(m.reflective == 0)
+    
+  test "transparency and refractive index for the default material":
+    check(m.transparency == 0)
+    check(m.refractiveIndex == 1.0)

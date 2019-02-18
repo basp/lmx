@@ -100,3 +100,56 @@ suite "intersections":
     let comps = i.precompute(r)
     check(comps.overPoint.z < -lmx.epsilon / 2)
     check(comps.point.z > comps.overPoint.z)
+
+  test "precomputing the reflection vector":
+    let
+      shape = newPlane()
+      r = initRay(point(0, 1, -1), vector(0, -sqrt2over2, sqrt2over2))
+      i = initIntersection(sqrt(2.0), shape)
+      comps = i.precompute(r)
+    check(comps.reflectv =~ vector(0, sqrt2over2, sqrt2over2))
+
+  test "finding n1 and n2 at various intersections":
+    let 
+      a = newGlassSphere()
+      b = newGlassSphere()
+      c = newGlassSphere()
+      r = initRay(point(0, 0, -4), vector(0, 0, 1))
+      xs = intersections(
+        initIntersection(2, a),
+        initIntersection(2.75, b),
+        initIntersection(3.25, c),
+        initIntersection(4.75, b),
+        initIntersection(5.25, c),
+        initIntersection(6, a))
+
+    a.transform = scaling(2, 2, 2).initTransform()
+    a.material.refractiveIndex = 1.5
+    b.transform = translation(0, 0, -0.25).initTransform()
+    b.material.refractiveIndex = 2.0
+    c.transform = translation(0, 0, 0.25).initTransform()
+    c.material.refractiveIndex = 2.5
+
+    let examples = @[
+      (index: 0, n1: 1.0, n2: 1.5),
+      (index: 1, n1: 1.5, n2: 2.0),
+      (index: 2, n1: 2.0, n2: 2.5),
+      (index: 3, n1: 2.5, n2: 2.5),
+      (index: 4, n1: 2.5, n2: 1.5),
+      (index: 5, n1: 1.5, n2: 1.0)]
+
+    for ex in examples:
+      let comps = xs[ex.index].precompute(r, xs)
+      check(comps.n1 == ex.n1)
+      check(comps.n2 == ex.n2)
+
+  test "the under point is offset below the surface":
+    let
+      r = initRay(point(0, 0, -5), vector(0, 0, 1))
+      shape = newGlassSphere()
+      i = initIntersection(5, shape)
+      xs = intersections(i)
+    shape.transform = translation(0, 0, 1).initTransform()
+    let comps = i.precompute(r, xs)
+    check(comps.underPoint.z > epsilon / 2)
+    check(comps.point.z < comps.underPoint.z)

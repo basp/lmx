@@ -18,7 +18,7 @@ type
     pattern*: Option[Pattern]
     color*: Color
     ambient*, diffuse*, specular*, shininess*, 
-      reflective*: float
+      reflective*, transparency*, refractiveIndex*: float
   Shape* = ref object of RootObj
     material*: Material
     transform*: Transform
@@ -31,11 +31,10 @@ type
     position*: Point3
     intensity*: Color
   Computations* = object
-    t*: float
+    t*, n1*, n2*: float
     obj*: Shape
-    point*: Point3
-    overPoint*: Point3
-    eyev*, normalv*: Vector3
+    point*, overPoint*, underPoint*: Point3
+    eyev*, normalv*, reflectv*: Vector3
     inside*: bool
   World* = ref object of RootObj
     objects*: seq[Shape]
@@ -54,6 +53,8 @@ proc initMaterial*(): Material {.inline.} =
   result.diffuse = 0.9
   result.specular = 0.9
   result.shininess = 200
+  result.transparency = 0
+  result.refractiveIndex = 1
 
 proc newStripePattern*(a, b: Color): StripePattern {.inline.} =
   result = new StripePattern
@@ -217,9 +218,9 @@ method localIntersect*(s: Plane, r: Ray): seq[Intersection] =
 method localNormalAt*(s: Plane, p: Point3): Vector3 =
   vector(0, 1, 0)
 
-proc precompute*(i: Intersection, r: Ray): Computations {.inline.} =
-  result.t = i.t
-  result.obj = i.obj
+proc precompute*(hit: Intersection, r: Ray, xs: seq[Intersection]): Computations {.inline.} =
+  result.t = hit.t
+  result.obj = hit.obj
   result.point = r.position(result.t)
   result.eyev = -r.direction
   result.normalv = result.obj.normalAt(result.point)
@@ -229,6 +230,31 @@ proc precompute*(i: Intersection, r: Ray): Computations {.inline.} =
   else:
     result.inside = false
   result.overPoint = result.point + result.normalv * epsilon
+  result.underPoint = result.point - result.normalv * epsilon
+  result.reflectv = r.direction.reflect(result.normalv)
+  var containers: seq[Shape]
+  for i in xs:
+    if i == hit:
+      if len(containers) == 0:
+        result.n1 = 1.0
+      else:
+        result.n1 = containers[containers.high].material.refractiveIndex
+    
+    if containers.contains(i.obj):
+      let idx = containers.find(i.obj)
+      containers.delete(idx)
+    else:
+      containers.add(i.obj)
+
+    if i == hit:
+      if len(containers) == 0:
+        result.n2 = 1.0
+      else:
+        result.n2 = containers[containers.high].material.refractiveIndex
+      break
+
+proc precompute*(i: Intersection, r: Ray): Computations {.inline.} =
+  precompute(i, r, @[i])
 
 iterator intersections*(w: World, ray: Ray): Intersection =
   for obj in w.objects:
@@ -237,6 +263,38 @@ iterator intersections*(w: World, ray: Ray): Intersection =
 
 proc intersect*(w: World, ray: Ray): seq[Intersection] {.inline.} =
   toSeq(w.intersections(ray)).intersections()
+
+proc colorAt*(w: World, ray: Ray, remaining = 5): Color {.inline.}
+
+proc reflectedColor*(w: World, comps: Computations, 
+                     remaining: int): Color {.inline.} =
+  if remaining <= 0:
+    return color(0, 0, 0)
+  if abs(comps.obj.material.reflective) < epsilon:
+    return color(0, 0, 0)
+  let 
+    reflectRay = initRay(comps.overPoint, comps.reflectv)
+    color = w.colorAt(reflectRay, remaining - 1)
+  color * comps.obj.material.reflective
+
+proc refractedColor*(w: World, comps: Computations, 
+                     remaining: int): Color {.inline.} =
+  if remaining <= 0:
+    return color(0, 0, 0)
+  if abs(comps.obj.material.transparency) < epsilon:
+    return color(0, 0, 0)
+  let
+    nRatio = comps.n1 / comps.n2
+    cosi = comps.eyev.dot(comps.normalv)
+    sin2t = nRatio * nRatio * (1 - cosi * cosi)
+  if sin2t > 1:
+    return color(0, 0, 0)
+  let
+    cost = sqrt(1.0 - sin2t)
+    direction = comps.normalv * (nRatio * cosi - cost) - comps.eyev * nRatio
+    refractRay = initRay(comps.underPoint, direction)
+    color = w.colorAt(refractRay, remaining - 1)
+  color * comps.obj.material.transparency
 
 proc shadowed*(w: World, p: Point3, light: PointLight): bool {.inline.} =
   let
@@ -248,14 +306,16 @@ proc shadowed*(w: World, p: Point3, light: PointLight): bool {.inline.} =
     maybeHit = ix.tryGetHit()
   maybeHit.isSome() and maybeHit.get().t < distance
 
-proc shade*(w: World, comps: Computations): Color {.inline.} =
+proc shade*(w: World, comps: Computations, remaining: int): Color {.inline.} =
   let m = comps.obj.material
   for light in w.lights:
     let shadow = w.shadowed(comps.overPoint, light)
     result += m.li(comps.obj, light, comps.overPoint, 
                    comps.eyev, comps.normalv, shadow)
+    result += w.reflectedColor(comps, remaining)
+    result += w.refractedColor(comps, remaining)
 
-proc colorAt*(w: World, ray: Ray): Color {.inline.} =
+proc colorAt*(w: World, ray: Ray, remaining = 5): Color {.inline.} =
   let 
     xs = w.intersect(ray)
     maybeHit = xs.tryGetHit()
@@ -263,5 +323,5 @@ proc colorAt*(w: World, ray: Ray): Color {.inline.} =
     return color(0, 0, 0)
   let 
     hit = maybeHit.get()
-    comps = hit.precompute(ray)
-  w.shade(comps)
+    comps = hit.precompute(ray, xs)
+  w.shade(comps, remaining)

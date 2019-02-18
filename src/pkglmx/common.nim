@@ -46,16 +46,16 @@ proc newPointLight*(position: Point3, intensity: Color): PointLight {.inline.} =
   result.intensity = intensity
 
 proc worldToObject*(s: Shape, p: Point3): Point3 =
-  var pt = p
+  result = p
   if s.parent.isSome():
-    pt = worldToObject(s.parent.get(), p)
-  s.transform.inv * pt
+    result = s.parent.get().worldToObject(p)
+  result = s.transform.inv * result
 
 proc normalToWorld*(s: Shape, n: Vector3): Vector3 =
   result = s.transform.invt * n
   result = result.normalize()
   if s.parent.isSome():
-    result = normalToWorld(s.parent.get(), result)
+    result = s.parent.get().normalToWorld(result)
 
 method colorAt*(pat: Pattern, p: Point3): Color {.base.} =
   raise newException(Exception, "not implemented")
@@ -159,7 +159,7 @@ method localIntersect*(s: Group, r: Ray): seq[Intersection] =
   result.intersections()
 
 method localNormalAt*(s: Group, p: Point3): Vector3 =
-  discard
+  raise newException(Exception, "not implemented")
 
 proc precompute*(hit: Intersection, r: Ray, xs: seq[Intersection]): Computations {.inline.} =
   result.t = hit.t

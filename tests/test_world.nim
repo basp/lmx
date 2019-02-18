@@ -257,3 +257,24 @@ suite "world":
       comps = xs[0].precompute(r, xs)
       c = w.shade(comps, 5)
     check(c =~ color(0.936425, 0.686425, 0.686425))
+
+  test "shade with a reflective, transparent material":
+    let
+      w = newDefaultWorld()
+      r = initRay(point(0, 0, -3), vector(0, -sqrt2over2, sqrt2over2))
+      floor = newPlane()
+      ball = newSphere()
+      xs = intersections(intersection(sqrt(2.0), floor))
+    floor.transform = translation(0, -1, 0).initTransform()
+    floor.material.reflective = 0.5
+    floor.material.transparency = 0.5
+    floor.material.refractiveIndex = 1.5
+    ball.transform = translation(0, -3.5, -0.5).initTransform()
+    ball.material.color = color(1, 0, 0)
+    ball.material.ambient = 0.5
+    w.objects.add(floor)
+    w.objects.add(ball)
+    let
+      comps = xs[0].precompute(r, xs)
+      c = w.shade(comps, 5)
+    check(c =~ color(0.93391, 0.69643, 0.69243))

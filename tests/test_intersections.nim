@@ -153,3 +153,35 @@ suite "intersections":
     let comps = i.precompute(r, xs)
     check(comps.underPoint.z > epsilon / 2)
     check(comps.point.z < comps.underPoint.z)
+
+  test "the Schlick approximation under total internal reflection":
+    let
+      shape = newGlassSphere()
+      r = initRay(point(0, 0, sqrt2over2), vector(0, 1, 0))
+      xs = intersections(
+        initIntersection(-sqrt2over2, shape),
+        initIntersection(sqrt2over2, shape))
+      comps = xs[1].precompute(r, xs)
+      reflectance = comps.schlick()
+    check(reflectance =~ 1.0)
+
+  test "the Schlick approximation with a perpendicular viewing angle":
+    let
+      shape = newGlassSphere()
+      r = initRay(point(0, 0, 0), vector(0, 1, 0))
+      xs = intersections(
+        initIntersection(-1, shape),
+        initIntersection(1, shape))
+      comps = xs[1].precompute(r, xs)
+      reflectance = comps.schlick()
+    check(reflectance =~ 0.04)
+
+  test "the Schlick approximation with a small angle and n2 > n1":
+    let
+      shape = newGlassSphere()
+      r = initRay(point(0, 0.99, -2), vector(0, 0, 1))
+      xs = intersections(
+        initIntersection(1.8589, shape))
+      comps = xs[0].precompute(r, xs)
+      reflectance = comps.schlick()
+    check(reflectance =~ 0.48873)

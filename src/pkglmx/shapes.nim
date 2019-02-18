@@ -8,6 +8,9 @@ type
   Cylinder* = ref object of Shape
     min*, max*: float
     closed*: bool
+  Group = ref object of Shape
+    parent: Shape
+    children: seq[Shape]
 
 proc newSphere*(): Sphere {.inline.} =
   result = new Sphere
@@ -94,27 +97,27 @@ method localNormalAt*(s: Cube, p: Point3): Vector3 =
     return vector(0, p.y, 0)
   return vector(0, 0, p.z)
 
-proc checkCap(r: Ray, t: float): bool =
-  let 
-    x = r.origin.x + t * r.direction.x
-    z = r.origin.z + t * r.direction.z
-  (x * x + z * z) <= 1
-
-proc intersectCaps(s: Cylinder, r: Ray): seq[Intersection] =
-  if (not s.closed) or (abs(r.direction.y) < epsilon):
-    return
-  var t: float
-  t = (s.min - r.origin.y) / r.direction.y
-  if checkCap(r, t):
-    result.add(intersection(t, s))
-  t = (s.max - r.origin.y) / r.direction.y
-  if checkCap(r, t):
-    result.add(intersection(t, s))
-
 method localIntersect*(s: Cylinder, r: Ray): seq[Intersection] =
+  proc checkCap(t: float): bool =
+    let 
+      x = r.origin.x + t * r.direction.x
+      z = r.origin.z + t * r.direction.z
+    (x * x + z * z) <= 1
+
+  proc intersectCaps(): seq[Intersection] =
+    if (not s.closed) or (abs(r.direction.y) < epsilon):
+      return
+    var t: float
+    t = (s.min - r.origin.y) / r.direction.y
+    if checkCap(t):
+      result.add(intersection(t, s))
+    t = (s.max - r.origin.y) / r.direction.y
+    if checkCap(t):
+      result.add(intersection(t, s))
+
   let a = pow(r.direction.x, 2) + pow(r.direction.z, 2)
   if abs(a) < epsilon:
-    return intersectCaps(s, r)
+    return intersectCaps()
   let
     b = 2 * r.origin.x * r.direction.x +
         2 * r.origin.z * r.direction.z
@@ -135,7 +138,7 @@ method localIntersect*(s: Cylinder, r: Ray): seq[Intersection] =
   let y1 = r.origin.y + t1 * r.direction.y
   if s.min < y1 and y1 < s.max:
     result.add(initIntersection(t1, s))
-  result.concat(intersectCaps(s, r))
+  result.concat(intersectCaps())
 
 method localNormalAt*(s: Cylinder, p: Point3): Vector3 =
   let dist = (p.x * p.x + p.z * p.z)

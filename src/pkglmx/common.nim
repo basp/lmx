@@ -12,8 +12,11 @@ type
     ambient*, diffuse*, specular*, shininess*, 
       reflective*, transparency*, refractiveIndex*: float
   Shape* = ref object of RootObj
+    parent*: Option[Group]
     material*: Material
     transform*: Transform
+  Group* = ref object of Shape
+    objects*: seq[Shape]
   Intersection* = object
     t*: float
     obj*: Shape
@@ -27,17 +30,40 @@ type
     position*: Point3
     intensity*: Color
 
+proc newGroup*(): Group {.inline.} =
+  result = new Group
+
+template add*(g: Group, s: Shape) =
+  s.parent = some(g)
+  g.objects.add(s)
+
+template len*(g: Group): int =
+  len(g.objects)
+
 proc newPointLight*(position: Point3, intensity: Color): PointLight {.inline.} =
   result = new PointLight
   result.position = position
   result.intensity = intensity
+
+proc worldToObject*(s: Shape, p: Point3): Point3 =
+  var pt = p
+  if s.parent.isSome():
+    pt = worldToObject(s.parent.get(), p)
+  s.transform.inv * pt
+
+proc normalToWorld*(s: Shape, n: Vector3): Vector3 =
+  result = s.transform.invt * n
+  result = result.normalize()
+  if s.parent.isSome():
+    result = normalToWorld(s.parent.get(), result)
 
 method colorAt*(pat: Pattern, p: Point3): Color {.base.} =
   raise newException(Exception, "not implemented")
 
 proc colorAt*(pat: Pattern, obj: Shape, worldPoint: Point3): Color =
   let
-    objPoint = obj.transform.inv * worldPoint
+    # objPoint = obj.transform.inv * worldPoint
+    objPoint = obj.worldToObject(worldPoint)
     patPoint = pat.transform.inv * objPoint
   pat.colorAt(patPoint)
 
@@ -115,12 +141,25 @@ proc intersect*(s: Shape, r: Ray): seq[Intersection] =
   let tr = s.transform.inv * r
   localIntersect(s, tr) 
 
-proc normalAt*(s: Shape, p: Point3): Vector3 =
+proc normalAt*(s: Shape, worldPoint: Point3): Vector3 =
+  # let
+  #   localPoint = s.transform.inv * p
+  #   localNormal = localNormalAt(s, localPoint)
+  #   worldNormal = s.transform.invt * localNormal
+  # worldNormal.normalize()
   let
-    localPoint = s.transform.inv * p
-    localNormal = localNormalAt(s, localPoint)
-    worldNormal = s.transform.invt * localNormal
-  worldNormal.normalize()
+    localPoint = s.worldToObject(worldPoint)
+    localNormal = s.localNormalAt(localPoint)
+  s.normalToWorld(localNormal)
+
+method localIntersect*(s: Group, r: Ray): seq[Intersection] =
+  for obj in s.objects:
+    for i in obj.intersect(r):
+      result.add(i)
+  result.intersections()
+
+method localNormalAt*(s: Group, p: Point3): Vector3 =
+  discard
 
 proc precompute*(hit: Intersection, r: Ray, xs: seq[Intersection]): Computations {.inline.} =
   result.t = hit.t

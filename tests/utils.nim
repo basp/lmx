@@ -1,8 +1,14 @@
 import math
 import lmx
 
+const
+  sqrt2over2* = sqrt(2.0) / 2
+  sqrt3over3* = sqrt(3.0) / 3
+
 type
   TestPattern* = ref object of Pattern
+  TestShape* = ref object of Shape
+    savedRay*: Ray
 
 proc newTestPattern*(): TestPattern =
   result = new TestPattern
@@ -11,9 +17,11 @@ proc newTestPattern*(): TestPattern =
 method colorAt*(pat: TestPattern, p: Point3): Color =
   color(p.x, p.y, p.z)
 
-const
-  sqrt2over2* = sqrt(2.0) / 2
-  sqrt3over3* = sqrt(3.0) / 3
+method localIntersect(s: TestShape, r: Ray): seq[Intersection] =
+  s.savedRay = r
+
+method localNormalAt(s: TestShape, p: Point3): Vector3 =
+  vector(p.x, p.y, p.z)
 
 proc `=~`*(a, b: float): bool =
   const eps = 0.00001

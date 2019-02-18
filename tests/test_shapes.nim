@@ -1,15 +1,5 @@
-import unittest, math
+import unittest, math, options
 import lmx, utils
-
-type
-  TestShape = ref object of Shape
-    savedRay: Ray
-
-method localIntersect(s: TestShape, r: Ray): seq[Intersection] =
-  s.savedRay = r
-
-method localNormalAt(s: TestShape, p: Point3): Vector3 =
-  vector(p.x, p.y, p.z)
 
 suite "shapes":
   test "intersecting a scaled shape with a ray":
@@ -41,3 +31,46 @@ suite "shapes":
     s.transform = initTransform(scaling(1, 0.5, 1) * rotationZ(PI / 5))
     let n = s.normalAt(point(0, sqrt2over2, -sqrt2over2))
     check(n =~ vector(0, 0.97014, -0.24254))
+
+  test "a shape has a parent attribute":
+    let s = new TestShape
+    check(s.parent.isNone())
+
+  test "converting a point from world to object space":
+    let
+      g1 = newGroup()
+      g2 = newGroup()
+      s = newSphere()
+    g1.transform = rotationY(PI / 2).initTransform()
+    g2.transform = scaling(2, 2, 2).initTransform()
+    g1.add(g2)
+    s.transform = translation(5, 0, 0).initTransform()
+    g2.add(s)
+    let p = s.worldToObject(point(-2, 0, -10))
+    check(p =~ point(0, 0, -1))
+
+  test "converting a normal from object to world space":
+    let
+      g1 = newGroup()
+      g2 = newGroup()
+      s = newSphere()
+    g1.transform = rotationY(PI/2).initTransform()
+    g2.transform = scaling(1, 2, 3).initTransform()
+    g1.add(g2)
+    s.transform = translation(5, 0, 0).initTransform()
+    g2.add(s)
+    let n = s.normalToWorld(vector(sqrt3over3, sqrt3over3, sqrt3over3))
+    check(n =~ vector(0.285714, 0.4285714, -0.8571428))
+
+  test "find the normal on a child object":
+    let
+      g1 = newGroup()
+      g2 = newGroup()
+      s = newSphere()
+    g1.transform = rotationY(PI/2).initTransform()
+    g2.transform = scaling(1, 2, 3).initTransform()
+    s.transform = translation(5, 0, 0).initTransform()
+    g1.add(g2)
+    g2.add(s)
+    let n = s.normalAt(point(1.7321, 1.1547, -5.5774))
+    check(n =~ vector(0.285703, 0.428543, -0.857160))

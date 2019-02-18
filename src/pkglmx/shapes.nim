@@ -8,9 +8,6 @@ type
   Cylinder* = ref object of Shape
     min*, max*: float
     closed*: bool
-  Group = ref object of Shape
-    parent: Shape
-    children: seq[Shape]
 
 proc newSphere*(): Sphere {.inline.} =
   result = new Sphere

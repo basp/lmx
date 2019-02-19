@@ -12,11 +12,9 @@ type
     ambient*, diffuse*, specular*, shininess*, 
       reflective*, transparency*, refractiveIndex*: float
   Shape* = ref object of RootObj
-    parent*: Option[Group]
+    parent*: Option[Shape]
     material*: Material
     transform*: Transform
-  Group* = ref object of Shape
-    objects*: seq[Shape]
   Intersection* = object
     t*: float
     obj*: Shape
@@ -29,16 +27,6 @@ type
   PointLight* = ref object of RootObj
     position*: Point3
     intensity*: Color
-
-proc newGroup*(): Group {.inline.} =
-  result = new Group
-
-template add*(g: Group, s: Shape) =
-  s.parent = some(g)
-  g.objects.add(s)
-
-template len*(g: Group): int =
-  len(g.objects)
 
 proc newPointLight*(position: Point3, intensity: Color): PointLight {.inline.} =
   result = new PointLight
@@ -137,6 +125,9 @@ method localIntersect*(s: Shape, r: Ray): seq[Intersection] {.base.} =
 method localNormalAt*(s: Shape, p: Point3): Vector3 {.base.} =
   raise newException(Exception, "not implemented")
 
+method includes*(s, other: Shape): bool {.base.} =
+  s == other
+
 proc intersect*(s: Shape, r: Ray): seq[Intersection] =
   let tr = s.transform.inv * r
   localIntersect(s, tr) 
@@ -151,15 +142,6 @@ proc normalAt*(s: Shape, worldPoint: Point3): Vector3 =
     localPoint = s.worldToObject(worldPoint)
     localNormal = s.localNormalAt(localPoint)
   s.normalToWorld(localNormal)
-
-method localIntersect*(s: Group, r: Ray): seq[Intersection] =
-  for obj in s.objects:
-    for i in obj.intersect(r):
-      result.add(i)
-  result.intersections()
-
-method localNormalAt*(s: Group, p: Point3): Vector3 =
-  raise newException(Exception, "not implemented")
 
 proc precompute*(hit: Intersection, r: Ray, xs: seq[Intersection]): Computations {.inline.} =
   result.t = hit.t

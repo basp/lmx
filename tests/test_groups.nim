@@ -8,7 +8,7 @@ suite "groups":
       s = new TestShape
     g.add(s)
     check(len(g) > 0)
-    check(s.parent == some(g))
+    check(s.parent == some(Shape(g)))
 
   test "intersecting a ray with an empty group":
     let

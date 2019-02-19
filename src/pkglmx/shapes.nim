@@ -1,4 +1,4 @@
-import math, sequtils
+import math, sequtils, options
 import geometry, transform, common
 
 type
@@ -8,6 +8,18 @@ type
   Cylinder* = ref object of Shape
     min*, max*: float
     closed*: bool
+  Triangle* = ref object of Shape
+    p1*, p2*, p3*: Point3
+    e1*, e2*, normal*: Vector3
+  Group* = ref object of Shape
+    objects*: seq[Shape]
+  Operation* = enum
+    opUnion
+    opIntersection
+    opDifference    
+  Csg* = ref object of Shape
+    op*: Operation
+    left*, right*: Shape
 
 proc newSphere*(): Sphere {.inline.} =
   result = new Sphere
@@ -30,6 +42,38 @@ proc newCylinder*(): Cylinder {.inline.} =
   result.material = initMaterial()
   result.min = -Inf
   result.max = Inf
+
+proc newTriangle*(p1, p2, p3: Point3): Triangle {.inline.} =
+  result = new Triangle
+  result.transform = initTransform(identityMatrix)
+  result.material = initMaterial()
+  result.p1 = p1
+  result.p2 = p2
+  result.p3 = p3
+  result.e1 = p2 - p1
+  result.e2 = p3 - p1
+  result.normal = cross(result.e2, result.e1).normalize()
+
+proc newGroup*(): Group {.inline.} =
+  result = new Group
+
+template add*(g: Group, s: Shape) =
+  s.parent = some(Shape(g))
+  g.objects.add(s)
+
+template len*(g: Group): int =
+  len(g.objects)
+
+method includes*(s: Group, other: Shape): bool =
+  s.objects.contains(other)
+
+proc newCsg*(op: Operation, left, right: Shape): Csg {.inline.} =
+  result = new Csg
+  result.op = op
+  result.left = left
+  result.right = right
+  left.parent = some(Shape(result))
+  right.parent = some(Shape(result))
 
 method localIntersect*(s: Sphere, r: Ray): seq[Intersection] =
   let
@@ -144,3 +188,66 @@ method localNormalAt*(s: Cylinder, p: Point3): Vector3 =
   if dist < 1 and p.y <= s.min + epsilon:
     return vector(0, -1, 0)
   vector(p.x, 0, p.z)
+
+method localIntersect*(s: Triangle, r: Ray): seq[Intersection] =
+  let
+    dirCrossE2 = cross(r.direction, s.e2)
+    det = dot(s.e1, dirCrossE2)
+  if abs(det) < epsilon:
+    return @[]
+  let
+    f = 1.0 / det
+    p1ToOrigin = r.origin - s.p1
+    u = f * dot(p1ToOrigin, dirCrossE2)
+  if u < 0 or u > 1:
+    return @[]
+  let
+    originCrossE1 = cross(p1ToOrigin, s.e1)
+    v = f * dot(r.direction, originCrossE1)
+  if v < 0 or (u + v) > 1:
+    return @[]
+  let t = f * dot(s.e2, originCrossE1)
+  @[intersection(t, s)]
+
+method localNormalAt*(s: Triangle, p: Point3): Vector3 =
+  s.normal
+
+method localIntersect*(s: Group, r: Ray): seq[Intersection] =
+  for obj in s.objects:
+    for i in obj.intersect(r):
+      result.add(i)
+  result.intersections()
+
+method localNormalAt*(s: Group, p: Point3): Vector3 =
+  raise newException(Exception, "not implemented")
+
+method includes*(s: Csg, other: Shape): bool =
+  s.left == other or s.right == other
+
+proc intersectionAllowed*(op: Operation, lhit, inl, inr: bool): bool =
+  if op == opUnion:
+    return (lhit and not inr) or (not lhit and not inl)
+  if op == opIntersection:
+    return (lhit and inr) or (not lhit and inl)
+  if op == opDifference:
+    return (lhit and not inr) or (not lhit and inl)
+
+proc filterIntersections*(csg: Csg, xs: seq[Intersection]): seq[Intersection] =
+  var
+    inl = false
+    inr = false
+  for i in xs:
+    let lhit = csg.left.includes(i.obj)
+    if csg.op.intersectionAllowed(lhit, inl, inr):
+      result.add(i)
+    if lhit:
+      inl = not inl
+    else:
+      inr = not inr
+
+method localIntersect*(s: Csg, r: Ray): seq[Intersection] =
+  let
+    leftXs = s.left.intersect(r)
+    rightXs = s.right.intersect(r)
+    xs = concat(leftXs, rightXs)
+  s.filterIntersections(xs.intersections())

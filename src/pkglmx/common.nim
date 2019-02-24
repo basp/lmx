@@ -33,21 +33,25 @@ proc newPointLight*(position: Point3, intensity: Color): PointLight {.inline.} =
   result.position = position
   result.intensity = intensity
 
+# intersect
 proc worldToObject*(s: Shape, p: Point3): Point3 =
   result = p
   if s.parent.isSome():
     result = s.parent.get().worldToObject(p)
   result = s.transform.inv * result
 
+# intersect
 proc normalToWorld*(s: Shape, n: Vector3): Vector3 =
   result = s.transform.invt * n
   result = result.normalize()
   if s.parent.isSome():
     result = s.parent.get().normalToWorld(result)
 
+# shade
 method colorAt*(pat: Pattern, p: Point3): Color {.base.} =
   raise newException(Exception, "not implemented")
 
+# shade
 proc colorAt*(pat: Pattern, obj: Shape, worldPoint: Point3): Color =
   let
     # objPoint = obj.transform.inv * worldPoint
@@ -65,6 +69,7 @@ proc initMaterial*(): Material {.inline.} =
   result.transparency = 0
   result.refractiveIndex = 1
 
+# shade
 proc li*(m: Material, obj: Shape, light: PointLight, 
          pos: Point3, eyev, normalv: Vector3,
          shadow = false): Color {.inline.} =
@@ -112,26 +117,31 @@ template intersection*(t: float, obj: Shape): Intersection =
 proc intersections*(xs: varargs[Intersection]): seq[Intersection] {.inline.} =
   result = @(xs)
   result.sort do (x, y: Intersection) -> int: cmp(x.t, y.t)
-  
+
+# trace/intersect
 proc tryGetHit*(xs: seq[Intersection]): Option[Intersection] =
   for i in xs:
     if i.t > 0: 
       return some(i)
   none(Intersection)
 
+# prim
 method localIntersect*(s: Shape, r: Ray): seq[Intersection] {.base.} =
   raise newException(Exception, "not implemented")
 
+# prim
 method localNormalAt*(s: Shape, p: Point3): Vector3 {.base.} =
   raise newException(Exception, "not implemented")
 
 method includes*(s, other: Shape): bool {.base.} =
   s == other
 
+# intersect
 proc intersect*(s: Shape, r: Ray): seq[Intersection] =
   let tr = s.transform.inv * r
   localIntersect(s, tr) 
 
+# trace
 proc normalAt*(s: Shape, worldPoint: Point3): Vector3 =
   # let
   #   localPoint = s.transform.inv * p
@@ -143,6 +153,8 @@ proc normalAt*(s: Shape, worldPoint: Point3): Vector3 =
     localNormal = s.localNormalAt(localPoint)
   s.normalToWorld(localNormal)
 
+
+# trace/intersect/shade?
 proc precompute*(hit: Intersection, r: Ray, xs: seq[Intersection]): Computations {.inline.} =
   result.t = hit.t
   result.obj = hit.obj
@@ -181,6 +193,7 @@ proc precompute*(hit: Intersection, r: Ray, xs: seq[Intersection]): Computations
 proc precompute*(i: Intersection, r: Ray): Computations {.inline.} =
   precompute(i, r, @[i])
 
+# shade
 proc schlick*(comps: Computations): float {.inline.} =
   var cos = dot(comps.eyev, comps.normalv)
   if comps.n1 > comps.n2:

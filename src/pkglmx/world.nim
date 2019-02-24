@@ -9,16 +9,20 @@ type
 proc newWorld*(): World {.inline.} =
   result = new World
 
+# trace
 iterator intersections*(w: World, ray: Ray): Intersection =
   for obj in w.objects:
     for x in obj.intersect(ray):
       yield x
 
+# trace/intersect
 proc intersect*(w: World, ray: Ray): seq[Intersection] {.inline.} =
   toSeq(w.intersections(ray)).intersections()
 
+# trace/shade
 proc colorAt*(w: World, ray: Ray, remaining = 5): Color {.inline.}
 
+# shade
 proc reflectedColor*(w: World, comps: Computations, 
                      remaining: int): Color {.inline.} =
   if remaining <= 0:
@@ -30,6 +34,7 @@ proc reflectedColor*(w: World, comps: Computations,
     color = w.colorAt(reflectRay, remaining - 1)
   color * comps.obj.material.reflective
 
+# shade
 proc refractedColor*(w: World, comps: Computations, 
                      remaining: int): Color {.inline.} =
   if remaining <= 0:
@@ -49,6 +54,7 @@ proc refractedColor*(w: World, comps: Computations,
     color = w.colorAt(refractRay, remaining - 1)
   color * comps.obj.material.transparency
 
+# shade
 proc shadowed*(w: World, p: Point3, light: PointLight): bool {.inline.} =
   let
     v = light.position - p
@@ -59,6 +65,7 @@ proc shadowed*(w: World, p: Point3, light: PointLight): bool {.inline.} =
     maybeHit = ix.tryGetHit()
   maybeHit.isSome() and maybeHit.get().t < distance
 
+# shade
 proc shade*(w: World, comps: Computations, remaining: int): Color {.inline.} =
   let m = comps.obj.material
   for light in w.lights:
@@ -79,6 +86,7 @@ proc shade*(w: World, comps: Computations, remaining: int): Color {.inline.} =
     else:
       result += surface + reflected + refracted
 
+# trace/shade
 proc colorAt*(w: World, ray: Ray, remaining = 5): Color {.inline.} =
   let 
     xs = w.intersect(ray)

@@ -1,5 +1,5 @@
 import math
-import geometry, transform, world, canvas
+import geometry, transform, world, canvas, colors
 
 type
   Camera = ref object of RootObj
@@ -39,8 +39,7 @@ proc render*(c: Camera, w: World): Canvas =
   result = newCanvas(c.hsize, c.vsize)
   for y in 0..pred(c.vsize):
     for x in 0..pred(c.hsize):
-      let
-        ray = c.rayForPixel(x, y)
-        color = w.colorAt(ray, 5)
-      result[x, y] = color
-      
+      let ray = c.rayForPixel(x, y)
+      let col = w.colorAt(ray)
+      result[x, y] = col  
+  
